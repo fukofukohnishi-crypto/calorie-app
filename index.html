@@ -1,0 +1,414 @@
+cat > /mnt/user-data/outputs/index.html << 'HTMLEOF'
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>カロリートラッカー</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#07070f;color:#e0e0e0;font-family:'Helvetica Neue','Hiragino Sans',sans-serif;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:40px}
+.header{padding:28px 20px 20px;text-align:center;border-bottom:1px solid #0f0f1c;background:linear-gradient(180deg,#0d0d1a,#07070f)}
+.date-label{font-size:10px;color:#333;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px}
+.gauge-wrap{position:relative;width:176px;height:176px;margin:0 auto}
+.gauge-wrap svg{position:absolute;top:0;left:0}
+.gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge-cal{font-size:38px;font-weight:700;line-height:1}
+.gauge-sub{font-size:11px;color:#555;margin-top:2px}
+.gauge-rem{font-size:12px;font-weight:600;margin-top:6px}
+.macros{margin-top:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 16px;text-align:left}
+.macro-label{display:flex;justify-content:space-between;margin-bottom:5px}
+.macro-label span:first-child{font-size:10px;color:#555}
+.macro-label span:last-child{font-size:10px;color:#666}
+.pill-track{height:6px;background:#1a1a2e;border-radius:99px;overflow:hidden}
+.pill-fill{height:100%;border-radius:99px;transition:width .6s ease}
+.seg-bar-wrap{margin-top:14px}
+.seg-bar{height:8px;background:#1a1a2e;border-radius:99px;display:flex;overflow:hidden}
+.seg-legend{display:flex;justify-content:center;gap:14px;margin-top:10px;flex-wrap:wrap}
+.seg-dot{width:7px;height:7px;border-radius:99px;flex-shrink:0}
+.seg-item{display:flex;align-items:center;gap:5px;font-size:11px}
+.sections{padding:14px 14px 0}
+.meal-section{border-radius:16px;overflow:hidden;margin-bottom:10px;border:1px solid #151520;background:#09090f;transition:border-color .3s}
+.meal-header{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.meal-emoji{font-size:18px;line-height:1}
+.meal-info{flex:1}
+.meal-title-row{display:flex;align-items:center;gap:8px}
+.meal-name{font-size:14px;font-weight:600;color:#ccc}
+.meal-kcal{font-size:13px}
+.meal-count{font-size:10px;color:#444;background:#151520;border-radius:99px;padding:1px 7px}
+.meal-mini-bar{height:3px;background:#151520;border-radius:99px;margin-top:6px;overflow:hidden}
+.meal-mini-fill{height:100%;border-radius:99px;transition:width .6s ease}
+.meal-arrow{color:#333;font-size:11px}
+.meal-body{border-top:1px solid #151520;padding:12px 14px}
+.entry-card{background:#0c0c1a;border:1px solid #1a1a2e;border-radius:10px;margin-bottom:6px;overflow:hidden}
+.entry-header{padding:10px 13px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.entry-text{flex:1;min-width:0}
+.entry-name{font-size:13px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry-nums{display:flex;gap:10px;margin-top:3px;font-size:11px;color:#555}
+.entry-kcal{color:#f59e0b}
+.entry-del{background:none;border:none;color:#333;cursor:pointer;font-size:15px;padding:2px 6px}
+.entry-detail{border-top:1px solid #1a1a2e;padding:11px 13px}
+.entry-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #0f0f1c}
+.entry-row span:first-child{color:#888}
+.entry-row span:last-child{color:#f59e0b}
+.entry-advice{margin-top:10px;padding:9px 11px;background:#080814;border-radius:8px;font-size:12px;color:#888;line-height:1.7}
+.input-box{background:#06060e;border:1px solid #151520;border-radius:11px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.input-box.error{border-color:#7f1d1d}
+textarea{width:100%;background:none;border:none;color:#ccc;font-size:13px;font-family:inherit;resize:none;line-height:1.6;outline:none}
+.input-footer{display:flex;justify-content:space-between;align-items:center}
+.input-hint{font-size:10px;color:#333}
+.analyze-btn{border:none;border-radius:9px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:background .2s}
+.error-msg{font-size:11px;color:#f87171;background:#1c0a0a;border-radius:7px;padding:7px 10px;line-height:1.5}
+.spinner{display:inline-block;width:11px;height:11px;border:2px solid #333;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.api-screen{position:fixed;inset:0;background:#07070f;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;z-index:100}
+.api-screen h2{font-size:20px;font-weight:700;color:#e0e0e0;margin-bottom:8px;text-align:center}
+.api-screen p{font-size:13px;color:#555;text-align:center;line-height:1.6;margin-bottom:24px}
+.api-textarea{width:100%;max-width:400px;background:#0f0f1a;border:1px solid #1a1a2e;border-radius:12px;padding:12px 16px;color:#ccc;font-size:13px;font-family:monospace;resize:none;outline:none;line-height:1.5}
+.api-save-btn{margin-top:16px;width:100%;max-width:400px;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s}
+.api-note{font-size:11px;color:#333;margin-top:16px;text-align:center;line-height:1.6}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;width:100%}
+.key-btn{background:none;border:1px solid #1a1a2e;border-radius:8px;padding:4px 10px;color:#444;font-size:11px;cursor:pointer;font-family:inherit}
+.modal-bg{position:fixed;inset:0;background:#07070fee;z-index:50;display:flex;align-items:center;justify-content:center;padding:24px}
+.modal{background:#0f0f1a;border:1px solid #1a1a2e;border-radius:16px;padding:24px;width:100%;max-width:400px}
+.modal h3{font-size:16px;font-weight:700;color:#e0e0e0;margin-bottom:16px}
+.modal-btns{display:flex;gap:10px;margin-top:14px}
+.modal-cancel{flex:1;background:#1a1a2e;border:none;border-radius:10px;padding:12px;color:#666;font-family:inherit;cursor:pointer}
+.modal-save{flex:1;background:#f59e0b;border:none;border-radius:10px;padding:12px;color:#000;font-weight:700;font-family:inherit;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div id="api-screen" class="api-screen">
+  <div style="font-size:40px;margin-bottom:16px">🔑</div>
+  <h2>APIキーを設定</h2>
+  <p>platform.claude.com で発行した<br>APIキーを貼り付けてください</p>
+  <textarea id="api-input" class="api-textarea" rows="3" placeholder="sk-ant-api..."></textarea>
+  <button id="api-save-btn" class="api-save-btn" style="background:#1a1a2e;color:#333">保存して開始</button>
+  <p class="api-note">キーはこの端末のみに保存されます</p>
+</div>
+
+<div id="modal-bg" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3>APIキーを変更</h3>
+    <textarea id="modal-input" class="api-textarea" rows="3"></textarea>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="modal-save" onclick="saveModalKey()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="header">
+    <div class="top-bar">
+      <div class="date-label" id="date-label"></div>
+      <button class="key-btn" onclick="openModal()">⚙️ APIキー</button>
+    </div>
+    <div class="gauge-wrap">
+      <svg width="176" height="176" id="gauge-svg">
+        <circle cx="88" cy="88" r="76" fill="none" stroke="#1a1a2e" stroke-width="10"/>
+        <circle id="gauge-arc" cx="88" cy="88" r="76" fill="none" stroke="#22d3ee" stroke-width="10"
+          stroke-linecap="round" stroke-dasharray="477.5" stroke-dashoffset="477.5"
+          transform="rotate(-90 88 88)" style="transition:stroke-dashoffset .8s ease,stroke .5s"/>
+      </svg>
+      <div class="gauge-center">
+        <div class="gauge-cal" id="gauge-cal" style="color:#22d3ee">0</div>
+        <div class="gauge-sub">/ 1800 kcal</div>
+        <div class="gauge-rem" id="gauge-rem" style="color:#666">残り 1800 kcal</div>
+      </div>
+    </div>
+    <div class="macros">
+      <div>
+        <div class="macro-label"><span>脂質</span><span id="fat-val">0g</span></div>
+        <div class="pill-track"><div class="pill-fill" id="fat-bar" style="width:0%;background:#ec4899"></div></div>
+      </div>
+      <div>
+        <div class="macro-label"><span>糖質</span><span id="carbs-val">0g</span></div>
+        <div class="pill-track"><div class="pill-fill" id="carbs-bar" style="width:0%;background:#818cf8"></div></div>
+      </div>
+      <div>
+        <div class="macro-label"><span>タンパク質</span><span id="protein-val">0g</span></div>
+        <div class="pill-track"><div class="pill-fill" id="protein-bar" style="width:0%;background:#22d3ee"></div></div>
+      </div>
+    </div>
+    <div class="seg-bar-wrap">
+      <div class="seg-bar" id="seg-bar"></div>
+      <div class="seg-legend" id="seg-legend"></div>
+    </div>
+  </div>
+  <div class="sections" id="sections"></div>
+</div>
+
+<script>
+const GOAL = {calories:1800,fat:60,carbs:220,protein:80};
+const MEALS = [
+  {key:'morning',label:'朝食',emoji:'🌅',color:'#f59e0b'},
+  {key:'lunch',label:'昼食',emoji:'☀️',color:'#10b981'},
+  {key:'snack',label:'おやつ',emoji:'🍪',color:'#ec4899'},
+  {key:'dinner',label:'夕食',emoji:'🌙',color:'#818cf8'},
+];
+const PROMPT = `あなたは栄養士AIです。食事の入力からJSONのみを返してください。前置き・説明・マークダウンは不要です。
+{"meals":[{"name":"食品名","calories":整数,"fat":整数,"carbs":整数,"protein":整数,"amount":"量"}],"total":{"calories":整数,"fat":整数,"carbs":整数,"protein":整数},"advice":"アドバイス2文","score":整数}
+量不明は一般的な一人前で推定。`;
+
+let apiKey = localStorage.getItem('calorie_api_key') || '';
+let data = {morning:[],lunch:[],snack:[],dinner:[]};
+let openSections = {morning:true,lunch:true,snack:true,dinner:true};
+
+// API Key setup
+const apiScreen = document.getElementById('api-screen');
+const appDiv = document.getElementById('app');
+const apiInput = document.getElementById('api-input');
+const apiSaveBtn = document.getElementById('api-save-btn');
+
+apiInput.addEventListener('input', () => {
+  const ok = apiInput.value.trim().startsWith('sk-');
+  apiSaveBtn.style.background = ok ? '#f59e0b' : '#1a1a2e';
+  apiSaveBtn.style.color = ok ? '#000' : '#333';
+});
+apiSaveBtn.addEventListener('click', () => {
+  const v = apiInput.value.trim();
+  if (!v.startsWith('sk-')) return;
+  apiKey = v;
+  localStorage.setItem('calorie_api_key', v);
+  apiScreen.style.display = 'none';
+  appDiv.style.display = 'block';
+  init();
+});
+
+function openModal() {
+  document.getElementById('modal-input').value = apiKey;
+  document.getElementById('modal-bg').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal-bg').style.display = 'none'; }
+function saveModalKey() {
+  const v = document.getElementById('modal-input').value.trim();
+  if (v) { apiKey = v; localStorage.setItem('calorie_api_key', v); }
+  closeModal();
+}
+
+function init() {
+  // Date
+  document.getElementById('date-label').textContent =
+    new Date().toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
+  renderAll();
+}
+
+function getTotals() {
+  return Object.values(data).flat().reduce((a,e)=>({
+    calories: a.calories+(e.total?.calories||0),
+    fat: a.fat+(e.total?.fat||0),
+    carbs: a.carbs+(e.total?.carbs||0),
+    protein: a.protein+(e.total?.protein||0),
+  }),{calories:0,fat:0,carbs:0,protein:0});
+}
+
+function renderGauge(t) {
+  const pct = Math.min(1, t.calories / GOAL.calories);
+  const over = t.calories > GOAL.calories;
+  const color = over ? '#ef4444' : pct > 0.85 ? '#f97316' : pct > 0.55 ? '#f59e0b' : '#22d3ee';
+  const circ = 2 * Math.PI * 76;
+  const arc = document.getElementById('gauge-arc');
+  arc.style.strokeDashoffset = circ * (1 - pct);
+  arc.style.stroke = color;
+  const calEl = document.getElementById('gauge-cal');
+  calEl.textContent = t.calories;
+  calEl.style.color = color;
+  const remEl = document.getElementById('gauge-rem');
+  remEl.textContent = over ? `+${t.calories - GOAL.calories} 超過` : `残り ${GOAL.calories - t.calories} kcal`;
+  remEl.style.color = over ? '#ef4444' : '#666';
+}
+
+function renderMacros(t) {
+  document.getElementById('fat-val').textContent = t.fat + 'g';
+  document.getElementById('carbs-val').textContent = t.carbs + 'g';
+  document.getElementById('protein-val').textContent = t.protein + 'g';
+  document.getElementById('fat-bar').style.width = Math.min(100, t.fat/GOAL.fat*100) + '%';
+  document.getElementById('carbs-bar').style.width = Math.min(100, t.carbs/GOAL.carbs*100) + '%';
+  document.getElementById('protein-bar').style.width = Math.min(100, t.protein/GOAL.protein*100) + '%';
+  document.getElementById('fat-bar').style.background = t.fat > GOAL.fat ? '#ef4444' : '#ec4899';
+  document.getElementById('carbs-bar').style.background = t.carbs > GOAL.carbs ? '#ef4444' : '#818cf8';
+  document.getElementById('protein-bar').style.background = t.protein > GOAL.protein ? '#ef4444' : '#22d3ee';
+}
+
+function renderSegBar() {
+  const bar = document.getElementById('seg-bar');
+  const legend = document.getElementById('seg-legend');
+  bar.innerHTML = '';
+  legend.innerHTML = '';
+  MEALS.forEach(m => {
+    const cal = (data[m.key]||[]).reduce((s,e)=>s+(e.total?.calories||0),0);
+    const w = Math.min(100, cal/GOAL.calories*100);
+    const div = document.createElement('div');
+    div.style.cssText = `width:${w}%;background:${m.color};transition:width .6s ease`;
+    bar.appendChild(div);
+    const item = document.createElement('div');
+    item.className = 'seg-item';
+    item.innerHTML = `<div class="seg-dot" style="background:${m.color}"></div><span style="color:#555">${m.label}</span><span style="color:${cal>0?m.color:'#333'}">${cal>0?cal:'—'}</span>`;
+    legend.appendChild(item);
+  });
+}
+
+function renderSections() {
+  const sec = document.getElementById('sections');
+  sec.innerHTML = '';
+  MEALS.forEach(m => {
+    const entries = data[m.key] || [];
+    const total = entries.reduce((s,e)=>s+(e.total?.calories||0),0);
+    const isOpen = openSections[m.key];
+    const miniW = Math.min(100, total/(GOAL.calories*0.35)*100);
+
+    const section = document.createElement('div');
+    section.className = 'meal-section';
+    if (entries.length > 0) section.style.borderColor = m.color + '30';
+
+    section.innerHTML = `
+      <div class="meal-header" onclick="toggleSection('${m.key}')">
+        <span class="meal-emoji">${m.emoji}</span>
+        <div class="meal-info">
+          <div class="meal-title-row">
+            <span class="meal-name">${m.label}</span>
+            ${total > 0 ? `<span class="meal-kcal" style="color:${m.color}">${total} kcal</span>` : ''}
+            ${entries.length > 0 ? `<span class="meal-count">${entries.length}件</span>` : ''}
+          </div>
+          <div class="meal-mini-bar">
+            <div class="meal-mini-fill" style="width:${miniW}%;background:${m.color};box-shadow:${total>0?`0 0 6px ${m.color}80`:'none'}"></div>
+          </div>
+        </div>
+        <span class="meal-arrow">${isOpen ? '▲' : '▼'}</span>
+      </div>
+      ${isOpen ? `
+      <div class="meal-body">
+        ${entries.map((e,i) => renderEntry(m.key, e, i)).join('')}
+        <div class="input-box" id="input-box-${m.key}">
+          <textarea id="ta-${m.key}" rows="2" placeholder="${m.label}を入力… 例: ご飯1杯・鮭の塩焼き"></textarea>
+          <div class="input-footer">
+            <span class="input-hint">Enterで送信</span>
+            <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
+          </div>
+          <div class="error-msg" id="err-${m.key}" style="display:none"></div>
+        </div>
+      </div>` : ''}
+    `;
+    sec.appendChild(section);
+
+    // textarea enter key
+    if (isOpen) {
+      const ta = document.getElementById(`ta-${m.key}`);
+      ta.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); analyze(m.key); }
+      });
+    }
+  });
+}
+
+function renderEntry(mealKey, entry, idx) {
+  const id = `entry-${mealKey}-${idx}`;
+  return `
+    <div class="entry-card" id="${id}">
+      <div class="entry-header" onclick="toggleEntry('${id}')">
+        <div class="entry-text">
+          <div class="entry-name">${entry.input}</div>
+          <div class="entry-nums">
+            <span class="entry-kcal">${entry.total?.calories||0} kcal</span>
+            <span>脂 ${entry.total?.fat||0}g</span>
+            <span>糖 ${entry.total?.carbs||0}g</span>
+            <span>P ${entry.total?.protein||0}g</span>
+          </div>
+        </div>
+        <button class="entry-del" onclick="event.stopPropagation();deleteEntry('${mealKey}',${idx})">✕</button>
+      </div>
+      <div class="entry-detail" id="detail-${id}" style="display:none">
+        ${(entry.meals||[]).map(m=>`
+          <div class="entry-row">
+            <span>${m.name} <span style="color:#444">(${m.amount})</span></span>
+            <span>${m.calories} kcal</span>
+          </div>`).join('')}
+        ${entry.advice ? `<div class="entry-advice">💬 ${entry.advice}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function toggleSection(key) {
+  openSections[key] = !openSections[key];
+  renderAll();
+}
+
+function toggleEntry(id) {
+  const el = document.getElementById('detail-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function deleteEntry(mealKey, idx) {
+  data[mealKey].splice(idx, 1);
+  renderAll();
+}
+
+function renderAll() {
+  const t = getTotals();
+  renderGauge(t);
+  renderMacros(t);
+  renderSegBar();
+  renderSections();
+}
+
+async function analyze(mealKey) {
+  const ta = document.getElementById(`ta-${mealKey}`);
+  const btn = document.getElementById(`btn-${mealKey}`);
+  const errEl = document.getElementById(`err-${mealKey}`);
+  const text = ta.value.trim();
+  if (!text) return;
+
+  const mealColor = MEALS.find(m=>m.key===mealKey).color;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 解析中…';
+  btn.style.background = '#1a1a2e';
+  btn.style.color = '#555';
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'x-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        system: PROMPT,
+        messages: [{role:'user',content:text}],
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error?.message || 'HTTP ' + res.status);
+    const raw = (json.content||[]).map(b=>b.text||'').join('').trim();
+    const cleaned = raw.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(cleaned);
+    data[mealKey].push({input:text, ...parsed, id:Date.now()});
+    renderAll();
+  } catch(e) {
+    errEl.textContent = '⚠️ ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '解析する';
+    btn.style.background = mealColor;
+    btn.style.color = '#000';
+  }
+}
+
+// Start
+if (apiKey) {
+  apiScreen.style.display = 'none';
+  appDiv.style.display = 'block';
+  init();
+}
+</script>
+</body>
+</html>
+HTMLEOF
+echo "done"
