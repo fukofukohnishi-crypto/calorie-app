@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -86,7 +85,7 @@ textarea{width:100%;background:none;border:none;color:#ccc;font-size:13px;font-f
   <h2>APIキーを設定</h2>
   <p>platform.claude.com で発行した<br>APIキーを貼り付けてください</p>
   <textarea id="api-input" class="api-textarea" rows="3" placeholder="sk-ant-api..."></textarea>
-  <button id="api-save-btn" class="api-save-btn" style="background:#1a1a2e;color:#333">保存して開始</button>
+  <button id="api-save-btn" class="api-save-btn" style="background:#f59e0b;color:#000">保存して開始</button>
   <p class="api-note">キーはこの端末のみに保存されます</p>
 </div>
 
@@ -165,9 +164,9 @@ const apiInput = document.getElementById('api-input');
 const apiSaveBtn = document.getElementById('api-save-btn');
 
 apiInput.addEventListener('input', () => {
-  const ok = apiInput.value.trim().length > 10;
-  apiSaveBtn.style.background = ok ? '#f59e0b' : '#1a1a2e';
-  apiSaveBtn.style.color = ok ? '#000' : '#333';
+  
+  
+  
 });
 apiSaveBtn.addEventListener('click', () => {
   const v = apiInput.value.trim();
@@ -285,115 +284,128 @@ function renderSections() {
         ${entries.map((e,i) => renderEntry(m.key, e, i)).join('')}
         <div class="input-box" id="input-box-${m.key}">
           <textarea id="ta-${m.key}" rows="2" placeholder="${m.label}を入力… 例: ご飯1杯・鮭の塩焼き"></textarea>
+          <div class="input-footer">
+            <span class="input-hint">Enterで送信</span>
+            <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
+          </div>
+          <div class="error-msg" id="err-${m.key}" style="display:none"></div>
+        </div>
+      </div>` : ''}
+    `;
+    sec.appendChild(section);
 
-```
-      <div class="input-footer">
-        <span class="input-hint">Enterで送信</span>
-        <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
-      </div>
-      <div class="error-msg" id="err-${m.key}" style="display:none"></div>
-    </div>
-  </div>` : ''}
-`;
-sec.appendChild(section);
-
-// textarea enter key
-if (isOpen) {
-  const ta = document.getElementById(`ta-${m.key}`);
-  ta.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); analyze(m.key); }
+    // textarea enter key
+    if (isOpen) {
+      const ta = document.getElementById(`ta-${m.key}`);
+      ta.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); analyze(m.key); }
+      });
+    }
   });
-}
-```
-
-});
 }
 
 function renderEntry(mealKey, entry, idx) {
-const id = `entry-${mealKey}-${idx}`;
-return ` <div class="entry-card" id="${id}"> <div class="entry-header" onclick="toggleEntry('${id}')"> <div class="entry-text"> <div class="entry-name">${entry.input}</div> <div class="entry-nums"> <span class="entry-kcal">${entry.total?.calories||0} kcal</span> <span>脂 ${entry.total?.fat||0}g</span> <span>糖 ${entry.total?.carbs||0}g</span> <span>P ${entry.total?.protein||0}g</span> </div> </div> <button class="entry-del" onclick="event.stopPropagation();deleteEntry('${mealKey}',${idx})">✕</button> </div> <div class="entry-detail" id="detail-${id}" style="display:none"> ${(entry.meals||[]).map(m=>`
-<div class="entry-row">
-<span>${m.name} <span style="color:#444">(${m.amount})</span></span>
-<span>${m.calories} kcal</span>
-</div>`).join('')} ${entry.advice ? `<div class="entry-advice">💬 ${entry.advice}</div>` : ''} </div> </div>`;
+  const id = `entry-${mealKey}-${idx}`;
+  return `
+    <div class="entry-card" id="${id}">
+      <div class="entry-header" onclick="toggleEntry('${id}')">
+        <div class="entry-text">
+          <div class="entry-name">${entry.input}</div>
+          <div class="entry-nums">
+            <span class="entry-kcal">${entry.total?.calories||0} kcal</span>
+            <span>脂 ${entry.total?.fat||0}g</span>
+            <span>糖 ${entry.total?.carbs||0}g</span>
+            <span>P ${entry.total?.protein||0}g</span>
+          </div>
+        </div>
+        <button class="entry-del" onclick="event.stopPropagation();deleteEntry('${mealKey}',${idx})">✕</button>
+      </div>
+      <div class="entry-detail" id="detail-${id}" style="display:none">
+        ${(entry.meals||[]).map(m=>`
+          <div class="entry-row">
+            <span>${m.name} <span style="color:#444">(${m.amount})</span></span>
+            <span>${m.calories} kcal</span>
+          </div>`).join('')}
+        ${entry.advice ? `<div class="entry-advice">💬 ${entry.advice}</div>` : ''}
+      </div>
+    </div>`;
 }
 
 function toggleSection(key) {
-openSections[key] = !openSections[key];
-renderAll();
+  openSections[key] = !openSections[key];
+  renderAll();
 }
 
 function toggleEntry(id) {
-const el = document.getElementById(‘detail-’ + id);
-if (el) el.style.display = el.style.display === ‘none’ ? ‘block’ : ‘none’;
+  const el = document.getElementById('detail-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 function deleteEntry(mealKey, idx) {
-data[mealKey].splice(idx, 1);
-renderAll();
+  data[mealKey].splice(idx, 1);
+  renderAll();
 }
 
 function renderAll() {
-const t = getTotals();
-renderGauge(t);
-renderMacros(t);
-renderSegBar();
-renderSections();
+  const t = getTotals();
+  renderGauge(t);
+  renderMacros(t);
+  renderSegBar();
+  renderSections();
 }
 
 async function analyze(mealKey) {
-const ta = document.getElementById(`ta-${mealKey}`);
-const btn = document.getElementById(`btn-${mealKey}`);
-const errEl = document.getElementById(`err-${mealKey}`);
-const text = ta.value.trim();
-if (!text) return;
+  const ta = document.getElementById(`ta-${mealKey}`);
+  const btn = document.getElementById(`btn-${mealKey}`);
+  const errEl = document.getElementById(`err-${mealKey}`);
+  const text = ta.value.trim();
+  if (!text) return;
 
-const mealColor = MEALS.find(m=>m.key===mealKey).color;
-btn.disabled = true;
-btn.innerHTML = ‘<span class="spinner"></span> 解析中…’;
-btn.style.background = ‘#1a1a2e’;
-btn.style.color = ‘#555’;
-errEl.style.display = ‘none’;
+  const mealColor = MEALS.find(m=>m.key===mealKey).color;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 解析中…';
+  btn.style.background = '#1a1a2e';
+  btn.style.color = '#555';
+  errEl.style.display = 'none';
 
-try {
-const res = await fetch(‘https://api.anthropic.com/v1/messages’, {
-method: ‘POST’,
-headers: {
-‘Content-Type’: ‘application/json’,
-‘anthropic-version’: ‘2023-06-01’,
-‘x-api-key’: apiKey,
-},
-body: JSON.stringify({
-model: ‘claude-haiku-4-5’,
-max_tokens: 1000,
-system: PROMPT,
-messages: [{role:‘user’,content:text}],
-}),
-});
-const json = await res.json();
-if (!res.ok) throw new Error(json.error?.message || ‘HTTP ’ + res.status);
-const raw = (json.content||[]).map(b=>b.text||’’).join(’’).trim();
-const cleaned = raw.replace(/`json|`/g,’’).trim();
-const parsed = JSON.parse(cleaned);
-data[mealKey].push({input:text, …parsed, id:Date.now()});
-renderAll();
-} catch(e) {
-errEl.textContent = ’⚠️ ’ + e.message;
-errEl.style.display = ‘block’;
-btn.disabled = false;
-btn.innerHTML = ‘解析する’;
-btn.style.background = mealColor;
-btn.style.color = ‘#000’;
-}
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'x-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 1000,
+        system: PROMPT,
+        messages: [{role:'user',content:text}],
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error?.message || 'HTTP ' + res.status);
+    const raw = (json.content||[]).map(b=>b.text||'').join('').trim();
+    const cleaned = raw.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(cleaned);
+    data[mealKey].push({input:text, ...parsed, id:Date.now()});
+    renderAll();
+  } catch(e) {
+    errEl.textContent = '⚠️ ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '解析する';
+    btn.style.background = mealColor;
+    btn.style.color = '#000';
+  }
 }
 
 // Start
 if (apiKey) {
-apiScreen.style.display = ‘none’;
-appDiv.style.display = ‘block’;
-init();
+  apiScreen.style.display = 'none';
+  appDiv.style.display = 'block';
+  init();
 }
 </script>
-
 </body>
 </html>
