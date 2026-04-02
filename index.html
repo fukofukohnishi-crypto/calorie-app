@@ -165,13 +165,13 @@ const apiInput = document.getElementById('api-input');
 const apiSaveBtn = document.getElementById('api-save-btn');
 
 apiInput.addEventListener('input', () => {
-  const ok = apiInput.value.trim().startsWith('sk-');
+  const ok = apiInput.value.trim().length > 10;
   apiSaveBtn.style.background = ok ? '#f59e0b' : '#1a1a2e';
   apiSaveBtn.style.color = ok ? '#000' : '#333';
 });
 apiSaveBtn.addEventListener('click', () => {
   const v = apiInput.value.trim();
-  if (!v.startsWith('sk-')) return;
+  
   apiKey = v;
   localStorage.setItem('calorie_api_key', v);
   apiScreen.style.display = 'none';
