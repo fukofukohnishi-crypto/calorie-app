@@ -114,6 +114,14 @@ input{outline:none}
 .w-compare{margin-top:10px;text-align:center;font-size:14px;min-height:20px}
 .w-list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #0f0f1c;font-size:12px}
 
+/* Favorites */
+.fav-btn{background:none;border:none;cursor:pointer;font-size:16px;padding:2px 4px;opacity:0.4;transition:opacity .2s}
+.fav-btn.saved{opacity:1}
+.fav-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.fav-chip{background:#0f0f1a;border:1px solid #1a1a2e;border-radius:20px;padding:5px 12px;font-size:12px;color:#aaa;cursor:pointer;display:flex;align-items:center;gap:6px;transition:border-color .2s}
+.fav-chip:active{border-color:#f59e0b}
+.fav-chip-del{color:#333;font-size:11px;margin-left:2px}
+
 /* Spinner */
 .spinner{display:inline-block;width:11px;height:11px;border:2px solid #333;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -160,6 +168,34 @@ input{outline:none}
 </div>
 
 <!-- App -->
+<div id="aete-modal" class="modal-bg" style="display:none">
+  <div class="modal" style="max-height:80vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+    <div style="padding:16px 16px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:16px;font-weight:700;color:#e0e0e0">🍱 あえて、を選ぶ</h3>
+        <button onclick="closeAeteModal()" style="background:none;border:none;color:#555;font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <input id="aete-search" type="text" placeholder="メニューを検索…" oninput="aeteSearch=this.value;renderAeteList()"
+        style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:9px 12px;color:#e0e0e0;font-size:13px;outline:none;margin-bottom:8px">
+      <input id="aete-meal-key" type="hidden" value="lunch">
+    </div>
+    <div id="aete-list" style="overflow-y:auto;flex:1;background:#09090f"></div>
+  </div>
+</div>
+<div id="pw-modal" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3>🔒 体重データ</h3>
+    <p style="font-size:12px;color:#666;margin-bottom:14px">パスワードを入力してください</p>
+    <input id="pw-input" type="password" placeholder="パスワード"
+      style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:12px;color:#e0e0e0;font-size:16px;outline:none;text-align:center;letter-spacing:4px"
+      onkeydown="if(event.key==='Enter')checkPw()">
+    <div id="pw-error" style="font-size:11px;color:#ef4444;text-align:center;margin-top:8px;display:none">パスワードが違います</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closePwModal()">キャンセル</button>
+      <button class="modal-save" onclick="checkPw()">確認</button>
+    </div>
+  </div>
+</div>
 <div id="app" style="display:none">
   <div class="header">
     <div class="top-bar">
@@ -179,6 +215,7 @@ input{outline:none}
       <div class="gauge-center">
         <div class="gauge-cal" id="gauge-cal" style="color:#22d3ee">0</div>
         <div class="gauge-rem" id="gauge-rem" style="color:#666">残り 1800 kcal</div>
+        <div id="gauge-goals" style="margin-top:6px;font-size:10px;color:#333;text-align:center">目標 1800 kcal｜ご飯 600g/日</div>
       </div>
     </div>
     <div class="macros">
@@ -214,11 +251,11 @@ input{outline:none}
   <div class="weight-section" id="weight-section">
     <div class="w-card">
       <div class="w-card-title">今日の体重</div>
-      <div class="w-input-row">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <input id="w-input" class="w-input" type="number" step="0.1" placeholder="00.0">
         <span class="w-unit">kg</span>
-        <button class="w-save-btn" onclick="saveWeight()">記録</button>
       </div>
+      <button class="w-save-btn" onclick="saveWeight()" style="width:100%">記録する</button>
       <div class="w-compare" id="w-compare"></div>
     </div>
     <div class="w-card">
@@ -253,6 +290,7 @@ function loadState() {
     goalCal = parseInt(localStorage.getItem('c_goalcal')) || 1800;
     goalRice = parseInt(localStorage.getItem('c_goalrice')) || 600;
     weightData = JSON.parse(localStorage.getItem('c_weight') || '{}');
+    weightPw = localStorage.getItem('c_weightpw') || '';
   } catch(e) {}
 }
 
@@ -287,20 +325,29 @@ function saveKeyModal() {
 function openGoalModal() {
   document.getElementById('goal-cal-input').value = goalCal;
   document.getElementById('goal-rice-input').value = goalRice;
+  document.getElementById('goal-pw-input').value = weightPw;
   document.getElementById('goal-modal').style.display = 'flex';
 }
 function closeGoalModal() { document.getElementById('goal-modal').style.display = 'none'; }
 function saveGoalModal() {
   const c = parseInt(document.getElementById('goal-cal-input').value);
   const r = parseInt(document.getElementById('goal-rice-input').value);
+  const pw = document.getElementById('goal-pw-input').value;
   if (c > 0) goalCal = c;
   if (r > 0) goalRice = r;
+  weightPw = pw;
+  weightUnlocked = false;
+  try { localStorage.setItem('c_weightpw', pw); } catch(e) {}
   saveGoals();
   renderAll();
   closeGoalModal();
 }
 
 function showTab(tab) {
+  if (tab === 'weight' && weightPw && !weightUnlocked) {
+    openPwModal();
+    return;
+  }
   const isFood = tab === 'food';
   document.getElementById('sections').style.display = isFood ? 'block' : 'none';
   document.getElementById('weight-section').style.display = isFood ? 'none' : 'block';
@@ -337,6 +384,8 @@ function renderGauge(t) {
   const remEl = document.getElementById('gauge-rem');
   remEl.textContent = over ? `+${t.calories - goalCal} kcal 超過` : `残り ${goalCal - t.calories} kcal`;
   remEl.style.color = over ? '#ef4444' : '#666';
+  const goalsEl = document.getElementById('gauge-goals');
+  if (goalsEl) goalsEl.textContent = `目標 ${goalCal} kcal｜ご飯 ${goalRice}g/日`;
 }
 
 function renderMacros(t) {
@@ -387,28 +436,20 @@ function renderRiceAdvice() {
   }
 
   // Calculate rice remaining
-  let riceEatenG = 0;
-  let nonRiceCarbs = 0;
+  // All carbs (rice + non-rice) are converted to rice equivalent
+  // Rice: 100g = 37g carbs
+  let totalCarbsG = 0;
   ['morning','lunch','snack'].forEach(key => {
     (mealData[key]||[]).forEach(e => {
-      (e.meals||[]).forEach(m => {
-        const name = m.name || '';
-        const isRice = /ご飯|ごはん|白米|玄米|rice/i.test(name);
-        if (isRice) {
-          const gm = (m.amount||'').match(/(\d+)\s*g/);
-          const bm = (m.amount||'').match(/(\d+)\s*(杯|膳)/);
-          if (gm) riceEatenG += parseInt(gm[1]);
-          else if (bm) riceEatenG += parseInt(bm[1]) * 150;
-          else riceEatenG += Math.round((m.carbs||0) / RICE_CARBS * 100);
-        } else {
-          nonRiceCarbs += m.carbs || 0;
-        }
-      });
+      totalCarbsG += e.total?.carbs || 0;
     });
   });
 
-  const nonRiceAsRiceG = Math.round(nonRiceCarbs / RICE_CARBS * 100);
-  const riceRem = Math.max(0, goalRice - riceEatenG - nonRiceAsRiceG);
+  // Convert total carbs to rice equivalent grams
+  const totalCarbsAsRiceG = Math.round(totalCarbsG / RICE_CARBS * 100);
+  const riceRem = Math.max(0, goalRice - totalCarbsAsRiceG);
+  const riceEatenG = totalCarbsAsRiceG; // for display
+  const nonRiceAsRiceG = 0; // merged into totalCarbsAsRiceG
   const remCal = goalCal - sofar.calories;
   const riceKcal = Math.round(riceRem * 1.68);
   const remCalAfterRice = remCal - riceKcal;
@@ -418,7 +459,7 @@ function renderRiceAdvice() {
     content.innerHTML = `今日の糖質はご飯目標分に達しています。夕食は <span style="color:#f59e0b;font-weight:700">ご飯なし</span> でおかず中心に。残り ${remCal} kcal。`;
   } else {
     content.innerHTML = `
-      ご飯目標 ${goalRice}g のうち既食 ${riceEatenG}g・他食材換算 ${nonRiceAsRiceG}g<br>
+      糖質合計 ${totalCarbsG}g → ご飯換算 ${totalCarbsAsRiceG}g 消費（目標 ${goalRice}g）<br>
       🍚 夕食のご飯 <span style="color:#10b981;font-weight:700;font-size:17px">${riceRem}g（${bowl}）</span><br>
       <span style="font-size:12px;color:#555">ご飯で ${riceKcal} kcal・おかずで残り ${remCalAfterRice} kcal</span>
     `;
@@ -450,6 +491,7 @@ function renderSections() {
               <span>P ${e.total?.protein||0}g</span>
             </div>
           </div>
+          <button class="fav-btn ${isFavorite(e.input)?'saved':''}" onclick="event.stopPropagation();toggleFav('${m.key}',${i})" title="お気に入り">${isFavorite(e.input)?'⭐':'☆'}</button>
           <button class="entry-del" onclick="event.stopPropagation();deleteEntry('${m.key}',${i})">✕</button>
         </div>
         <div class="entry-detail" id="detail-${m.key}-${i}">
@@ -475,11 +517,19 @@ function renderSections() {
       ${isOpen ? `
       <div class="meal-body">
         ${entriesHTML}
+        ${favorites.length > 0 ? '<div class="fav-list">' + favorites.map((f,fi)=>`
+          <div class="fav-chip" onclick="applyFavorite('${m.key}',favorites[${fi}])">
+            ⭐ ${f.input.length>14?f.input.slice(0,14)+'…':f.input} <span style="color:#555;font-size:10px">${f.total?.calories||0}kcal</span>
+            <span class="fav-chip-del" onclick="event.stopPropagation();deleteFavorite(favorites[${fi}].input)">✕</span>
+          </div>`).join('') + '</div>' : ''}
         <div class="input-box">
           <textarea id="ta-${m.key}" rows="2" placeholder="${m.label}を入力… 例: ご飯1杯・鮭の塩焼き"></textarea>
           <div class="input-footer">
             <span class="input-hint">Enterで送信</span>
-            <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
+            <div style="display:flex;gap:6px">
+              ${m.key === 'lunch' ? `<button onclick="openAeteModal('lunch')" style="background:#09090f;border:1px solid #818cf840;border-radius:9px;padding:8px 10px;color:#818cf8;font-size:11px;font-weight:700;cursor:pointer">🍱 あえて</button>` : ''}
+              <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
+            </div>
           </div>
           <div class="err-msg" id="err-${m.key}"></div>
         </div>
@@ -669,6 +719,176 @@ function drawChart() {
     ctx.fillStyle='#818cf8'; ctx.fill();
     if(isT){ctx.beginPath();ctx.arc(xS(i),yS(v),5,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();}
   });
+}
+
+// Favorites
+let favorites = JSON.parse(localStorage.getItem('c_favs') || '[]');
+
+function saveFavorite(entry) {
+  const exists = favorites.some(f => f.input === entry.input);
+  if (exists) return;
+  favorites.push({input: entry.input, total: entry.total, meals: entry.meals, advice: entry.advice});
+  try { localStorage.setItem('c_favs', JSON.stringify(favorites)); } catch(e) {}
+}
+
+function deleteFavorite(input) {
+  favorites = favorites.filter(f => f.input !== input);
+  try { localStorage.setItem('c_favs', JSON.stringify(favorites)); } catch(e) {}
+  renderAll();
+}
+
+function applyFavorite(mealKey, fav) {
+  mealData[mealKey].push({...fav, id: Date.now()});
+  renderAll();
+}
+
+function isFavorite(input) {
+  return favorites.some(f => f.input === input);
+}
+
+function toggleFav(mealKey, idx) {
+  const entry = mealData[mealKey][idx];
+  if (!entry) return;
+  if (isFavorite(entry.input)) {
+    deleteFavorite(entry.input);
+  } else {
+    saveFavorite(entry);
+    renderAll();
+  }
+}
+
+
+// あえて、データベース
+const AETE_DB = [
+  {id:38, name:"照り焼き月見ハンバーグ、根菜とハーブのバターライス", calories:492, protein:17, fat:16, carbs:74, sugar:66},
+  {id:39, name:"月見チキンカツデミソース、根菜ときのこのまぜご飯", calories:499, protein:13, fat:25, carbs:60, sugar:51},
+  {id:40, name:"にんにく醤油から揚げ、ごま油香る大根の葉まぜご飯", calories:498, protein:24, fat:18, carbs:63, sugar:57},
+  {id:41, name:"三元豚のロースカツカレー、枝豆ご飯", calories:536, protein:17, fat:21, carbs:74, sugar:66},
+  {id:44, name:"ルーローハン、たけのこと蓮根のまぜご飯", calories:532, protein:15, fat:23, carbs:69, sugar:63},
+  {id:45, name:"とろっと卵の親子丼、根菜ときのこのまぜご飯", calories:399, protein:24, fat:12, carbs:52, sugar:45},
+  {id:46, name:"三元豚のカツ丼、牛蒡と干しえびのまぜご飯", calories:472, protein:14, fat:19, carbs:64, sugar:58},
+  {id:48, name:"とろっと卵のミートソースドリア、蓮根のターメリックライス", calories:443, protein:12, fat:16, carbs:66, sugar:60},
+  {id:49, name:"トマトのキーマカレー、コーンのまぜご飯", calories:447, protein:16, fat:12, carbs:73, sugar:65},
+  {id:50, name:"こく旨海老カレー、枝豆と鮭のバターライス", calories:502, protein:12, fat:21, carbs:70, sugar:63},
+  {id:51, name:"鯵フライ、大根の葉と干しえびのまぜご飯", calories:581, protein:16, fat:26, carbs:74, sugar:68},
+  {id:52, name:"和風醤油ハンバーグ、根菜ときのこのまぜご飯", calories:483, protein:17, fat:18, carbs:67, sugar:60},
+  {id:54, name:"ロコモコハンバーグ、根菜のドライカレー", calories:503, protein:18, fat:17, carbs:73, sugar:65},
+  {id:55, name:"豚丼、牛蒡とさつまいものまぜご飯", calories:398, protein:11, fat:12, carbs:64, sugar:59},
+  {id:56, name:"海南鶏飯、根菜と枝豆のチキンライス", calories:502, protein:19, fat:19, carbs:67, sugar:61},
+  {id:57, name:"鰆の西京焼き、枝豆と人参のまぜご飯", calories:416, protein:19, fat:13, carbs:59, sugar:53},
+  {id:58, name:"鱈のパン粉焼きバター醤油味、焼きとうもろこしと枝豆ご飯", calories:439, protein:19, fat:15, carbs:60, sugar:54},
+  {id:60, name:"白身魚のムニエル風、たけのこと蓮根のまぜご飯", calories:454, protein:15, fat:16, carbs:66, sugar:60},
+  {id:62, name:"トムヤムクン風味から揚げ、たけのこと蓮根のまぜご飯", calories:500, protein:23, fat:19, carbs:63, sugar:57},
+  {id:64, name:"干しえびとガーリックライス弁当", calories:512, protein:13, fat:24, carbs:65, sugar:57},
+  {id:14, name:"甘辛豚プルコギ、さつまいもと牛蒡のまぜご飯", calories:402, protein:16, fat:15, carbs:55, sugar:47},
+  {id:16, name:"トマトタルタルサーモンフライ、枝豆と蓮根のまぜご飯", calories:486, protein:14, fat:19, carbs:68, sugar:61},
+  {id:17, name:"和風ガパオ、コーンバターライス", calories:483, protein:17, fat:18, carbs:67, sugar:60},
+  {id:18, name:"白身魚のムニエル風、たけのこと蓮根のまぜご飯", calories:454, protein:15, fat:16, carbs:66, sugar:60},
+  {id:19, name:"柚子胡椒だれ豚しゃぶ、生姜鶏そぼろまぜご飯", calories:433, protein:18, fat:12, carbs:67, sugar:60},
+  {id:20, name:"月見スパイスキーマカレー、枝豆ご飯", calories:441, protein:17, fat:13, carbs:68, sugar:60},
+  {id:21, name:"トマトチーズハンバーグ、枝豆バター醤油ご飯", calories:555, protein:21, fat:22, carbs:72, sugar:64},
+  {id:22, name:"デミグラスハンバーグ、焼きとうもろこしご飯", calories:526, protein:18, fat:23, carbs:65, sugar:58},
+  {id:23, name:"青椒肉絲、きのこと根菜のまぜご飯", calories:452, protein:16, fat:17, carbs:62, sugar:56},
+  {id:26, name:"生姜香る鶏そぼろ、きのこと根菜のまぜご飯", calories:442, protein:15, fat:15, carbs:65, sugar:59},
+  {id:27, name:"牛肉オイスター炒め、さつまいもと牛蒡のまぜご飯", calories:430, protein:15, fat:16, carbs:60, sugar:53},
+  {id:28, name:"ガリバタチキン、さつまいもと牛蒡のまぜご飯", calories:556, protein:20, fat:25, carbs:66, sugar:59},
+  {id:29, name:"スパイシータコライス、蓮根のバターご飯", calories:466, protein:14, fat:19, carbs:63, sugar:57},
+  {id:30, name:"ピリ辛ビビンバ、枝豆のまぜご飯", calories:515, protein:21, fat:23, carbs:60, sugar:52},
+  {id:31, name:"塩麹ケイジャンチキン、ジャンバラヤ風まぜご飯", calories:454, protein:24, fat:17, carbs:55, sugar:48},
+  {id:33, name:"山椒香る四川風麻婆豆腐、きのこと根菜のまぜご飯", calories:491, protein:18, fat:20, carbs:63, sugar:57},
+  {id:34, name:"グリーンキーマカレー、焼きとうもろこしご飯", calories:519, protein:13, fat:22, carbs:71, sugar:63},
+  {id:36, name:"揚げ豚と豆鼓の回鍋肉風、干しえびとごまの中華風まぜご飯", calories:488, protein:16, fat:20, carbs:64, sugar:58},
+  {id:37, name:"カレーハンバーグ、コーンバターライス", calories:526, protein:18, fat:20, carbs:73, sugar:64},
+  {id:47, name:"黒酢酢豚、枝豆と人参のまぜご飯", calories:467, protein:15, fat:19, carbs:63, sugar:56},
+  {id:1, name:"山椒香るぶりの塩焼き、生姜鶏そぼろまぜご飯", calories:455, protein:23, fat:14, carbs:63, sugar:56},
+  {id:2, name:"トマト生姜焼き、枝豆と干しえびのまぜご飯", calories:454, protein:24, fat:17, carbs:55, sugar:47},
+  {id:3, name:"ギョーザ、枝豆と干しえびのまぜご飯", calories:464, protein:24, fat:18, carbs:55, sugar:48},
+  {id:4, name:"若鶏の香ばし醤油焼き、鮭ときのこのまぜご飯", calories:469, protein:20, fat:16, carbs:66, sugar:57},
+  {id:8, name:"香味だれ油淋鶏と彩り野菜、たけのこと蓮根のまぜご飯", calories:533, protein:19, fat:25, carbs:61, sugar:55},
+  {id:9, name:"タルタルチキン南蛮、生姜鶏そぼろまぜご飯", calories:465, protein:17, fat:20, carbs:57, sugar:51},
+  {id:10, name:"揚げ海老タルタル、枝豆と干しえびのまぜご飯", calories:416, protein:17, fat:18, carbs:50, sugar:43},
+  {id:11, name:"甘辛海老チリ、オムライス風まぜご飯", calories:469, protein:14, fat:18, carbs:66, sugar:60},
+  {id:13, name:"アボカドタルタル海老カツ、生姜と枝豆のまぜご飯", calories:541, protein:13, fat:25, carbs:70, sugar:62},
+  {id:15, name:"梅香る豚しゃぶ、わかめとたけのこのまぜご飯", calories:409, protein:18, fat:13, carbs:58, sugar:52},
+  {id:24, name:"磯辺七味から揚げ、根菜の中華風まぜご飯", calories:454, protein:22, fat:14, carbs:63, sugar:57},
+  {id:25, name:"白身魚タルタル、枝豆と干しえびのまぜご飯", calories:565, protein:18, fat:29, carbs:61, sugar:55},
+  {id:32, name:"照り焼きチキンマヨ風ソース、鶏そぼろまぜご飯", calories:473, protein:24, fat:17, carbs:59, sugar:53},
+  {id:35, name:"ホーリーバジル香るガパオ、枝豆と生姜のまぜご飯", calories:428, protein:18, fat:12, carbs:66, sugar:58},
+  {id:42, name:"ネギ塩竜田揚げ、たけのこと蓮根のまぜご飯", calories:488, protein:19, fat:20, carbs:61, sugar:55},
+  {id:43, name:"チーズ風味ヤンニョムチキン、人参とたけのこのまぜご飯", calories:463, protein:18, fat:18, carbs:60, sugar:55},
+  {id:53, name:"麻辣キーマカレー、干しえびのガーリックライス", calories:512, protein:13, fat:24, carbs:65, sugar:57},
+  {id:63, name:"トムヤムクン風味から揚げ、たけのこと蓮根のまぜご飯", calories:500, protein:23, fat:19, carbs:63, sugar:57},
+];
+
+function applyAete(item, mealKey) {
+  const entry = {
+    input: `あえて、No.${item.id} ${item.name}`,
+    meals: [{name: item.name, calories: item.calories, fat: item.fat, carbs: item.carbs, protein: item.protein, amount: '1食'}],
+    total: {calories: item.calories, fat: item.fat, carbs: item.carbs, protein: item.protein},
+    advice: `あえて、の栄養バランスの良いお弁当です。糖質${item.sugar||item.carbs}g・タンパク質${item.protein}gで1日の目標の約1/3をカバーします。`,
+    score: 8,
+    id: Date.now()
+  };
+  mealData[mealKey].push(entry);
+  renderAll();
+  closeAeteModal();
+}
+
+let aeteSearch = '';
+function openAeteModal(mealKey) {
+  document.getElementById('aete-meal-key').value = mealKey;
+  aeteSearch = '';
+  document.getElementById('aete-search').value = '';
+  renderAeteList();
+  document.getElementById('aete-modal').style.display = 'flex';
+}
+function closeAeteModal() { document.getElementById('aete-modal').style.display = 'none'; }
+function renderAeteList() {
+  const key = document.getElementById('aete-meal-key').value;
+  const q = aeteSearch.toLowerCase();
+  const filtered = q ? AETE_DB.filter(i => i.name.toLowerCase().includes(q)) : AETE_DB;
+  const list = document.getElementById('aete-list');
+  list.innerHTML = filtered.map(item => `
+    <div onclick="applyAete(AETE_DB.find(x=>x.id===${item.id}), document.getElementById('aete-meal-key').value)"
+      style="padding:12px 14px;border-bottom:1px solid #0f0f1c;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;color:#ccc;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No.${item.id} ${item.name}</div>
+        <div style="font-size:11px;color:#555;display:flex;gap:10px">
+          <span style="color:#f59e0b">${item.calories}kcal</span>
+          <span>脂${item.fat}g</span>
+          <span>糖${item.sugar||item.carbs}g</span>
+          <span>P${item.protein}g</span>
+        </div>
+      </div>
+      <span style="color:#818cf8;font-size:18px;margin-left:10px">+</span>
+    </div>
+  `).join('') || '<div style="padding:20px;text-align:center;color:#555;font-size:13px">見つかりません</div>';
+}
+
+// Password for weight tab
+let weightPw = localStorage.getItem('c_weightpw') || '';
+let weightUnlocked = false;
+
+function openPwModal() {
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').style.display = 'none';
+  document.getElementById('pw-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('pw-input').focus(), 100);
+}
+function closePwModal() {
+  document.getElementById('pw-modal').style.display = 'none';
+}
+function checkPw() {
+  const entered = document.getElementById('pw-input').value;
+  if (entered === weightPw) {
+    weightUnlocked = true;
+    closePwModal();
+    showTab('weight');
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
 }
 
 function startApp() {
