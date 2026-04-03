@@ -100,11 +100,24 @@ textarea{width:100%;background:none;border:none;color:#ccc;font-size:13px;font-f
   </div>
 </div>
 
+<div id="goal-bg" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3>🎯 目標カロリー設定</h3>
+    <div style="margin-top:12px">
+      <div style="font-size:11px;color:#888;margin-bottom:8px">1日の目標カロリー (kcal)</div>
+      <input id="goal-input" type="number" style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:12px;color:#e0e0e0;font-size:20px;font-family:monospace;outline:none;text-align:center">
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeGoal()">キャンセル</button>
+      <button class="modal-save" onclick="saveGoal()">保存</button>
+    </div>
+  </div>
+</div>
 <div id="app" style="display:none">
   <div class="header">
     <div class="top-bar">
       <div class="date-label" id="date-label"></div>
-      <button class="key-btn" onclick="openModal()">⚙️ APIキー</button>
+      <div style="display:flex;gap:6px"><button class="key-btn" onclick="openGoal()">🎯 目標</button><button class="key-btn" onclick="openModal()">⚙️ APIキー</button></div>
     </div>
     <div class="gauge-wrap">
       <svg width="176" height="176" id="gauge-svg">
@@ -138,11 +151,41 @@ textarea{width:100%;background:none;border:none;color:#ccc;font-size:13px;font-f
       <div class="seg-legend" id="seg-legend"></div>
     </div>
   </div>
-  <div class="sections" id="sections"></div>
+  <div style="display:flex;gap:8px;padding:14px 14px 0">
+  <button onclick="showTab('food')" id="tab-food" style="flex:1;background:#818cf8;border:none;border-radius:10px;padding:10px;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🍽️ 食事</button>
+  <button onclick="showTab('weight')" id="tab-weight" style="flex:1;background:#09090f;border:1px solid #151520;border-none;border-radius:10px;padding:10px;color:#555;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⚖️ 体重</button>
+</div>
+<div class="sections" id="sections"></div>
+
+<div id="rice-advice" style="display:none;margin:0 14px 10px">
+  <div style="background:linear-gradient(135deg,#0f1a0f,#091409);border:1px solid #10b98130;border-radius:16px;padding:16px">
+    <div style="font-size:11px;color:#10b981;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">🍚 夕食のご飯量アドバイス</div>
+    <div id="rice-advice-content" style="font-size:14px;color:#ccc;line-height:1.7"></div>
+  </div>
+</div>
+<div id="weight-section" style="display:none;padding:0 14px 20px">
+  <!-- Weight input -->
+  <div style="background:#09090f;border:1px solid #151520;border-radius:16px;padding:16px;margin-bottom:12px">
+    <div style="font-size:12px;color:#555;margin-bottom:10px;letter-spacing:1px;text-transform:uppercase">今日の体重</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <input id="weight-input" type="number" step="0.1" placeholder="00.0" style="flex:1;background:#06060e;border:1px solid #1a1a2e;border-radius:10px;padding:12px;color:#e0e0e0;font-size:24px;font-family:monospace;outline:none;text-align:center">
+      <span style="color:#555;font-size:14px">kg</span>
+      <button onclick="saveWeight()" style="background:#818cf8;border:none;border-radius:10px;padding:12px 18px;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">記録</button>
+    </div>
+    <div id="weight-compare" style="margin-top:12px;text-align:center;font-size:14px;color:#555"></div>
+  </div>
+
+  <!-- Graph -->
+  <div style="background:#09090f;border:1px solid #151520;border-radius:16px;padding:16px">
+    <div style="font-size:12px;color:#555;margin-bottom:14px;letter-spacing:1px;text-transform:uppercase">体重推移（14日）</div>
+    <canvas id="weight-chart" style="width:100%;height:180px"></canvas>
+    <div id="weight-list" style="margin-top:14px"></div>
+  </div>
+</div>
 </div>
 
 <script>
-const GOAL = {calories:1800,fat:60,carbs:220,protein:80};
+let GOAL = {calories: parseInt(localStorage.getItem('goal_cal')) || 1800, fat:60, carbs:220, protein:80};
 const MEALS = [
   {key:'morning',label:'朝食',emoji:'🌅',color:'#f59e0b'},
   {key:'lunch',label:'昼食',emoji:'☀️',color:'#10b981'},
@@ -187,6 +230,21 @@ function saveModalKey() {
   const v = document.getElementById('modal-input').value.trim();
   if (v) { apiKey = v; localStorage.setItem('calorie_api_key', v); }
   closeModal();
+}
+
+function openGoal() {
+  document.getElementById('goal-input').value = GOAL.calories;
+  document.getElementById('goal-bg').style.display = 'flex';
+}
+function closeGoal() { document.getElementById('goal-bg').style.display = 'none'; }
+function saveGoal() {
+  const v = parseInt(document.getElementById('goal-input').value);
+  if (v > 0) {
+    GOAL.calories = v;
+    localStorage.setItem('goal_cal', v);
+    renderAll();
+  }
+  closeGoal();
 }
 
 function init() {
@@ -352,6 +410,7 @@ function renderAll() {
   renderMacros(t);
   renderSegBar();
   renderSections();
+  calcRiceAdvice();
 }
 
 async function analyze(mealKey) {
@@ -386,6 +445,250 @@ async function analyze(mealKey) {
     btn.style.background = mealColor;
     btn.style.color = '#000';
   }
+}
+
+// Weight functions
+let weightData = JSON.parse(localStorage.getItem('weight_data') || '{}');
+
+function showTab(tab) {
+  const isFood = tab === 'food';
+  document.getElementById('sections').style.display = isFood ? 'block' : 'none';
+  document.getElementById('weight-section').style.display = isFood ? 'none' : 'block';
+  document.getElementById('tab-food').style.background = isFood ? '#818cf8' : '#09090f';
+  document.getElementById('tab-food').style.color = isFood ? '#000' : '#555';
+  document.getElementById('tab-food').style.border = isFood ? 'none' : '1px solid #151520';
+  document.getElementById('tab-weight').style.background = isFood ? '#09090f' : '#818cf8';
+  document.getElementById('tab-weight').style.color = isFood ? '#555' : '#000';
+  document.getElementById('tab-weight').style.border = isFood ? '1px solid #151520' : 'none';
+  if (!isFood) renderWeightSection();
+}
+
+function getTodayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function saveWeight() {
+  const val = parseFloat(document.getElementById('weight-input').value);
+  if (!val || val < 20 || val > 300) return;
+  const today = getTodayStr();
+  weightData[today] = val;
+  localStorage.setItem('weight_data', JSON.stringify(weightData));
+  renderWeightSection();
+}
+
+function renderWeightSection() {
+  const today = getTodayStr();
+  const keys = Object.keys(weightData).sort();
+  const todayVal = weightData[today];
+
+  // Set today's input
+  if (todayVal) document.getElementById('weight-input').value = todayVal;
+
+  // Compare with yesterday
+  const compareEl = document.getElementById('weight-compare');
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+  const yKey = yesterday.toISOString().slice(0, 10);
+  const yVal = weightData[yKey];
+  if (todayVal && yVal) {
+    const diff = (todayVal - yVal).toFixed(1);
+    const sign = diff > 0 ? '+' : '';
+    const color = diff > 0 ? '#ef4444' : diff < 0 ? '#10b981' : '#555';
+    const emoji = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
+    compareEl.innerHTML = `<span style="color:${color};font-size:16px;font-weight:700">${emoji} 前日比 ${sign}${diff} kg</span>`;
+  } else if (todayVal) {
+    compareEl.innerHTML = '<span style="color:#555;font-size:12px">前日のデータなし</span>';
+  } else {
+    compareEl.innerHTML = '';
+  }
+
+  // Draw chart
+  drawWeightChart(keys);
+
+  // Recent list
+  const listEl = document.getElementById('weight-list');
+  const recent = keys.slice(-7).reverse();
+  listEl.innerHTML = recent.map(k => {
+    const d = new Date(k + 'T00:00:00');
+    const label = d.toLocaleDateString('ja-JP', {month:'numeric',day:'numeric',weekday:'short'});
+    const val = weightData[k];
+    const prev = weightData[keys[keys.indexOf(k) - 1]];
+    let diffStr = '';
+    if (prev) {
+      const diff = (val - prev).toFixed(1);
+      const sign = diff > 0 ? '+' : '';
+      const color = diff > 0 ? '#ef4444' : diff < 0 ? '#10b981' : '#555';
+      diffStr = `<span style="font-size:11px;color:${color}">${sign}${diff}</span>`;
+    }
+    const isToday = k === today;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #0f0f1c">
+      <span style="font-size:12px;color:${isToday ? '#818cf8' : '#666'}">${label}${isToday ? ' 今日' : ''}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${diffStr}
+        <span style="font-family:monospace;font-size:14px;color:${isToday ? '#818cf8' : '#ccc'};font-weight:${isToday ? '700' : '400'}">${val} kg</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function drawWeightChart(keys) {
+  const canvas = document.getElementById('weight-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio || 320;
+  canvas.height = 180 * (window.devicePixelRatio || 1);
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  const W = rect.width || 320, H = 180;
+
+  // Get last 14 days
+  const today = getTodayStr();
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  const vals = days.map(d => weightData[d] || null);
+  const validVals = vals.filter(v => v !== null);
+  if (validVals.length === 0) {
+    ctx.fillStyle = '#333';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('データがありません', W/2, H/2);
+    return;
+  }
+
+  const minV = Math.min(...validVals) - 1;
+  const maxV = Math.max(...validVals) + 1;
+  const pad = { top: 16, bottom: 24, left: 32, right: 12 };
+  const gW = W - pad.left - pad.right;
+  const gH = H - pad.top - pad.bottom;
+
+  const xScale = i => pad.left + (i / 13) * gW;
+  const yScale = v => pad.top + gH - ((v - minV) / (maxV - minV)) * gH;
+
+  // Grid lines
+  ctx.strokeStyle = '#1a1a2e';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i++) {
+    const y = pad.top + (i / 3) * gH;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    const val = maxV - (i / 3) * (maxV - minV);
+    ctx.fillStyle = '#333'; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(1), pad.left - 4, y + 3);
+  }
+
+  // X labels (every 2 days)
+  ctx.fillStyle = '#333'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+  days.forEach((d, i) => {
+    if (i % 2 === 0) {
+      const dd = new Date(d + 'T00:00:00');
+      ctx.fillText(`${dd.getMonth()+1}/${dd.getDate()}`, xScale(i), H - 4);
+    }
+  });
+
+  // Fill area
+  const firstValid = vals.findIndex(v => v !== null);
+  ctx.beginPath();
+  let started = false;
+  vals.forEach((v, i) => {
+    if (v === null) return;
+    if (!started) { ctx.moveTo(xScale(i), yScale(v)); started = true; }
+    else ctx.lineTo(xScale(i), yScale(v));
+  });
+  const lastValid = [...vals].reverse().findIndex(v => v !== null);
+  const lastIdx = vals.length - 1 - lastValid;
+  ctx.lineTo(xScale(lastIdx), H - pad.bottom);
+  ctx.lineTo(xScale(firstValid), H - pad.bottom);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(129,140,248,0.15)';
+  ctx.fill();
+
+  // Line
+  ctx.beginPath(); started = false;
+  ctx.strokeStyle = '#818cf8'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  vals.forEach((v, i) => {
+    if (v === null) return;
+    if (!started) { ctx.moveTo(xScale(i), yScale(v)); started = true; }
+    else ctx.lineTo(xScale(i), yScale(v));
+  });
+  ctx.stroke();
+
+  // Dots
+  vals.forEach((v, i) => {
+    if (v === null) return;
+    const isToday = days[i] === today;
+    ctx.beginPath();
+    ctx.arc(xScale(i), yScale(v), isToday ? 5 : 3, 0, Math.PI * 2);
+    ctx.fillStyle = isToday ? '#818cf8' : '#818cf8';
+    ctx.fill();
+    if (isToday) {
+      ctx.beginPath();
+      ctx.arc(xScale(i), yScale(v), 5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  });
+}
+
+function calcRiceAdvice() {
+  // Get totals so far (morning + lunch + snack)
+  const mealKeys = ['morning', 'lunch', 'snack'];
+  const sofar = mealKeys.reduce((acc, key) => {
+    (data[key] || []).forEach(e => {
+      acc.calories += e.total?.calories || 0;
+      acc.carbs += e.total?.carbs || 0;
+      acc.fat += e.total?.fat || 0;
+      acc.protein += e.total?.protein || 0;
+    });
+    return acc;
+  }, {calories:0, carbs:0, fat:0, protein:0});
+
+  const hasData = sofar.calories > 0;
+  const hasDinner = (data['dinner'] || []).length > 0;
+  const adviceEl = document.getElementById('rice-advice');
+  const contentEl = document.getElementById('rice-advice-content');
+
+  if (!hasData) { adviceEl.style.display = 'none'; return; }
+
+  adviceEl.style.display = 'block';
+
+  const remCal = GOAL.calories - sofar.calories;
+  const goalCarbs = GOAL.carbs || 220;
+  const remCarbs = goalCarbs - sofar.carbs;
+
+  // Rice: 100g = 168kcal, carbs 37g
+  // Optimal rice amount based on remaining carbs
+  const riceByCarbs = Math.round((remCarbs / 37) * 100);
+  const riceByCalories = Math.round((remCal / 168) * 100);
+  const riceG = Math.max(0, Math.min(riceByCarbs, riceByCalories));
+  const riceKcal = Math.round(riceG * 1.68);
+
+  const remCalAfterRice = remCal - riceKcal;
+
+  let msg = '';
+  if (hasDinner) {
+    // Already have dinner entries
+    const dinnerTotal = (data['dinner'] || []).reduce((s,e) => s + (e.total?.calories||0), 0);
+    const total = sofar.calories + dinnerTotal;
+    const diff = total - GOAL.calories;
+    if (diff > 100) {
+      msg = `現在 <span style="color:#ef4444;font-weight:700">+${diff} kcal 超過</span> です。明日は朝食か昼食を少し控えめにしましょう。`;
+    } else if (diff < -100) {
+      msg = `まだ <span style="color:#10b981;font-weight:700">${Math.abs(diff)} kcal</span> 余裕があります。軽いおつまみや果物を足してもOKです。`;
+    } else {
+      msg = `<span style="color:#10b981;font-weight:700">ほぼ目標通り！</span> 今日のPFCバランスは良好です👍`;
+    }
+  } else if (remCal <= 0) {
+    msg = `すでに目標カロリーに達しています。夕食は <span style="color:#f59e0b;font-weight:700">野菜・タンパク質中心</span> にして、ご飯は控えめにしましょう。`;
+  } else if (riceG <= 0) {
+    msg = `糖質がほぼ上限です。夕食は <span style="color:#f59e0b;font-weight:700">ご飯なし</span> でタンパク質・野菜中心がおすすめです。残り ${remCal} kcal。`;
+  } else {
+    const pct = Math.round((riceG / 150) * 100);
+    const bowl = riceG >= 200 ? '大盛り' : riceG >= 150 ? '普通盛り' : riceG >= 100 ? '小盛り' : '少量';
+    msg = `残り <span style="color:#f59e0b;font-weight:700">${remCal} kcal</span>・糖質 <span style="color:#818cf8;font-weight:700">${remCarbs}g</span><br>
+🍚 ご飯 <span style="color:#10b981;font-weight:700;font-size:18px">${riceG}g（${bowl}）</span> がおすすめ<br>
+<span style="font-size:12px;color:#555">おかずで残り ${remCalAfterRice} kcal・ご飯以外の糖質も忘れずに</span>`;
+  }
+  contentEl.innerHTML = msg;
 }
 
 // Start
