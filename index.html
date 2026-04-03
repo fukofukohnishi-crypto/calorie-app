@@ -215,7 +215,7 @@ input{outline:none}
       <div class="gauge-center">
         <div class="gauge-cal" id="gauge-cal" style="color:#22d3ee">0</div>
         <div class="gauge-rem" id="gauge-rem" style="color:#666">残り 1800 kcal</div>
-        <div id="gauge-goals" style="margin-top:6px;font-size:10px;color:#333;text-align:center">目標 1800 kcal｜ご飯 600g/日</div>
+        <div id="gauge-goals" style="margin-top:4px;font-size:9px;color:#333;text-align:center;line-height:1.4">目標 1800 kcal<br>ご飯 600g/日</div>
       </div>
     </div>
     <div class="macros">
@@ -352,6 +352,7 @@ function showTab(tab) {
   document.getElementById('sections').style.display = isFood ? 'block' : 'none';
   document.getElementById('weight-section').style.display = isFood ? 'none' : 'block';
   document.getElementById('rice-box').style.display = isFood ? '' : 'none';
+  if (isFood) weightUnlocked = false;
   document.getElementById('tab-food').className = 'tab-btn' + (isFood ? ' active' : '');
   document.getElementById('tab-weight').className = 'tab-btn' + (!isFood ? ' active' : '');
   if (!isFood) renderWeightSection();
@@ -385,7 +386,7 @@ function renderGauge(t) {
   remEl.textContent = over ? `+${t.calories - goalCal} kcal 超過` : `残り ${goalCal - t.calories} kcal`;
   remEl.style.color = over ? '#ef4444' : '#666';
   const goalsEl = document.getElementById('gauge-goals');
-  if (goalsEl) goalsEl.textContent = `目標 ${goalCal} kcal｜ご飯 ${goalRice}g/日`;
+  if (goalsEl) goalsEl.innerHTML = `目標 ${goalCal} kcal<br>ご飯 ${goalRice}g/日`;
 }
 
 function renderMacros(t) {
@@ -889,6 +890,19 @@ function checkPw() {
     document.getElementById('pw-input').value = '';
     document.getElementById('pw-input').focus();
   }
+}
+
+function addQuick(mealKey, name, cal, fat, carbs, protein) {
+  const entry = {
+    input: name,
+    meals: [{name: name, calories: cal, fat: fat, carbs: carbs, protein: protein, amount: '1食分'}],
+    total: {calories: cal, fat: fat, carbs: carbs, protein: protein},
+    advice: '',
+    score: 7,
+    id: Date.now()
+  };
+  mealData[mealKey].push(entry);
+  renderAll();
 }
 
 function startApp() {
