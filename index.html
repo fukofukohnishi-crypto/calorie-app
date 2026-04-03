@@ -281,6 +281,8 @@ let goalCal = 1800;
 let goalRice = 600;
 let mealData = {morning:[], lunch:[], snack:[], dinner:[]};
 let weightData = {};
+let weightPw = '';
+let weightUnlocked = false;
 let openSecs = {morning:true, lunch:true, snack:true, dinner:true};
 
 // Load from localStorage safely
@@ -524,6 +526,15 @@ function renderSections() {
             <span class="fav-chip-del" onclick="event.stopPropagation();deleteFavorite(favorites[${fi}].input)">✕</span>
           </div>`).join('') + '</div>' : ''}
         <div class="input-box">
+          ${m.key === 'morning' ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
+            <button onclick="addQuick('morning','ご飯140g',235,0,52,4)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">ご飯140g</button>
+            <button onclick="addQuick('morning','卵焼き',80,5,2,6)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">卵焼き</button>
+            <button onclick="addQuick('morning','納豆',100,5,6,8)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">納豆</button>
+            <button onclick="addQuick('morning','味噌汁',40,1,5,2)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">味噌汁</button>
+            <button onclick="addQuick('morning','レタスサラダ',20,0,3,1)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">レタスサラダ</button>
+            <button onclick="addQuick('morning','りんご',80,0,20,0)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">りんご</button>
+            <button onclick="addQuick('morning','みかん',45,0,11,1)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">みかん</button>
+          </div>` : ''}
           <textarea id="ta-${m.key}" rows="2" placeholder="${m.label}を入力… 例: ご飯1杯・鮭の塩焼き"></textarea>
           <div class="input-footer">
             <span class="input-hint">Enterで送信</span>
@@ -867,7 +878,6 @@ function renderAeteList() {
 }
 
 // Password for weight tab
-let weightPw = localStorage.getItem('c_weightpw') || '';
 let weightUnlocked = false;
 
 function openPwModal() {
