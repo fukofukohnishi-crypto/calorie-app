@@ -103,9 +103,16 @@ textarea{width:100%;background:none;border:none;color:#ccc;font-size:13px;font-f
 <div id="goal-bg" class="modal-bg" style="display:none">
   <div class="modal">
     <h3>🎯 目標カロリー設定</h3>
-    <div style="margin-top:12px">
-      <div style="font-size:11px;color:#888;margin-bottom:8px">1日の目標カロリー (kcal)</div>
-      <input id="goal-input" type="number" style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:12px;color:#e0e0e0;font-size:20px;font-family:monospace;outline:none;text-align:center">
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:12px">
+      <div>
+        <div style="font-size:11px;color:#888;margin-bottom:8px">1日の目標カロリー (kcal)</div>
+        <input id="goal-input" type="number" style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:12px;color:#e0e0e0;font-size:20px;font-family:monospace;outline:none;text-align:center">
+      </div>
+      <div>
+        <div style="font-size:11px;color:#888;margin-bottom:8px">1日のご飯目標 (g)</div>
+        <input id="goal-rice-input" type="number" style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:12px;color:#e0e0e0;font-size:20px;font-family:monospace;outline:none;text-align:center">
+        <div style="font-size:10px;color:#333;margin-top:6px;text-align:center">ご飯以外の糖質は自動でご飯量に換算して引き算します</div>
+      </div>
     </div>
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeGoal()">キャンセル</button>
@@ -185,7 +192,7 @@ textarea{width:100%;background:none;border:none;color:#ccc;font-size:13px;font-f
 </div>
 
 <script>
-let GOAL = {calories: parseInt(localStorage.getItem('goal_cal')) || 1800, fat:60, carbs:220, protein:80};
+let GOAL = {calories: parseInt(localStorage.getItem('goal_cal')) || 1800, rice: parseInt(localStorage.getItem('goal_rice')) || 600, fat:60, carbs:220, protein:80};
 const MEALS = [
   {key:'morning',label:'朝食',emoji:'🌅',color:'#f59e0b'},
   {key:'lunch',label:'昼食',emoji:'☀️',color:'#10b981'},
@@ -234,16 +241,16 @@ function saveModalKey() {
 
 function openGoal() {
   document.getElementById('goal-input').value = GOAL.calories;
+  document.getElementById('goal-rice-input').value = GOAL.rice;
   document.getElementById('goal-bg').style.display = 'flex';
 }
 function closeGoal() { document.getElementById('goal-bg').style.display = 'none'; }
 function saveGoal() {
   const v = parseInt(document.getElementById('goal-input').value);
-  if (v > 0) {
-    GOAL.calories = v;
-    localStorage.setItem('goal_cal', v);
-    renderAll();
-  }
+  const r = parseInt(document.getElementById('goal-rice-input').value);
+  if (v > 0) { GOAL.calories = v; localStorage.setItem('goal_cal', v); }
+  if (r > 0) { GOAL.rice = r; localStorage.setItem('goal_rice', r); }
+  renderAll();
   closeGoal();
 }
 
@@ -630,17 +637,45 @@ function drawWeightChart(keys) {
 }
 
 function calcRiceAdvice() {
-  // Get totals so far (morning + lunch + snack)
+  // Rice constants: 100g = 168kcal, carbs 37g
+  const RICE_CARBS_PER_100G = 37;
+
+  // Collect all entries except dinner, track rice separately
   const mealKeys = ['morning', 'lunch', 'snack'];
+  let totalCarbsExRice = 0; // carbs from non-rice foods
+  let riceEaten = 0;        // rice already eaten (g)
+
+  mealKeys.forEach(key => {
+    (data[key] || []).forEach(e => {
+      // Check each food item - if it contains "ご飯" or "米" or "rice", count as rice
+      (e.meals || []).forEach(m => {
+        const name = (m.name || '').toLowerCase();
+        if (name.includes('ご飯') || name.includes('ごはん') || name.includes('白米') || name.includes('米') || name.includes('rice')) {
+          // Parse amount to grams
+          const amountStr = m.amount || '';
+          const gMatch = amountStr.match(/(\d+)\s*g/);
+          const bowlMatch = amountStr.match(/(\d+)\s*(杯|膳)/);
+          if (gMatch) {
+            riceEaten += parseInt(gMatch[1]);
+          } else if (bowlMatch) {
+            riceEaten += parseInt(bowlMatch[1]) * 150;
+          } else {
+            // Estimate from carbs
+            riceEaten += Math.round((m.carbs / RICE_CARBS_PER_100G) * 100);
+          }
+        } else {
+          totalCarbsExRice += m.carbs || 0;
+        }
+      });
+    });
+  });
+
   const sofar = mealKeys.reduce((acc, key) => {
     (data[key] || []).forEach(e => {
       acc.calories += e.total?.calories || 0;
-      acc.carbs += e.total?.carbs || 0;
-      acc.fat += e.total?.fat || 0;
-      acc.protein += e.total?.protein || 0;
     });
     return acc;
-  }, {calories:0, carbs:0, fat:0, protein:0});
+  }, {calories:0});
 
   const hasData = sofar.calories > 0;
   const hasDinner = (data['dinner'] || []).length > 0;
@@ -648,45 +683,42 @@ function calcRiceAdvice() {
   const contentEl = document.getElementById('rice-advice-content');
 
   if (!hasData) { adviceEl.style.display = 'none'; return; }
-
   adviceEl.style.display = 'block';
 
+  if (hasDinner) {
+    const dinnerCal = (data['dinner'] || []).reduce((s,e) => s + (e.total?.calories||0), 0);
+    const allCal = Object.values(data).flat().reduce((s,e) => s + (e.total?.calories||0), 0);
+    const diff = allCal - GOAL.calories;
+    let msg = '';
+    if (diff > 100) {
+      msg = `今日は <span style="color:#ef4444;font-weight:700">+${diff} kcal 超過</span>。明日は少し控えめにしましょう。`;
+    } else if (diff < -200) {
+      msg = `まだ <span style="color:#10b981;font-weight:700">${Math.abs(diff)} kcal</span> 余裕あり。軽いものを足してもOKです。`;
+    } else {
+      msg = `<span style="color:#10b981;font-weight:700">今日はほぼ目標通り！</span> よく頑張りました👍`;
+    }
+    contentEl.innerHTML = msg;
+    return;
+  }
+
+  // ご飯目標から計算
+  const riceGoal = GOAL.rice || 600;
+  // ご飯以外の糖質をご飯換算してご飯目標から引く
+  const carbsAsRice = Math.round((totalCarbsExRice / RICE_CARBS_PER_100G) * 100);
+  const riceRemaining = Math.max(0, riceGoal - riceEaten - carbsAsRice);
   const remCal = GOAL.calories - sofar.calories;
-  const goalCarbs = GOAL.carbs || 220;
-  const remCarbs = goalCarbs - sofar.carbs;
 
-  // Rice: 100g = 168kcal, carbs 37g
-  // Optimal rice amount based on remaining carbs
-  const riceByCarbs = Math.round((remCarbs / 37) * 100);
-  const riceByCalories = Math.round((remCal / 168) * 100);
-  const riceG = Math.max(0, Math.min(riceByCarbs, riceByCalories));
-  const riceKcal = Math.round(riceG * 1.68);
-
+  const bowl = riceRemaining >= 250 ? '大盛り' : riceRemaining >= 180 ? '普通盛り' : riceRemaining >= 120 ? '小盛り' : riceRemaining >= 60 ? '少量' : 'なし';
+  const riceKcal = Math.round(riceRemaining * 1.68);
   const remCalAfterRice = remCal - riceKcal;
 
   let msg = '';
-  if (hasDinner) {
-    // Already have dinner entries
-    const dinnerTotal = (data['dinner'] || []).reduce((s,e) => s + (e.total?.calories||0), 0);
-    const total = sofar.calories + dinnerTotal;
-    const diff = total - GOAL.calories;
-    if (diff > 100) {
-      msg = `現在 <span style="color:#ef4444;font-weight:700">+${diff} kcal 超過</span> です。明日は朝食か昼食を少し控えめにしましょう。`;
-    } else if (diff < -100) {
-      msg = `まだ <span style="color:#10b981;font-weight:700">${Math.abs(diff)} kcal</span> 余裕があります。軽いおつまみや果物を足してもOKです。`;
-    } else {
-      msg = `<span style="color:#10b981;font-weight:700">ほぼ目標通り！</span> 今日のPFCバランスは良好です👍`;
-    }
-  } else if (remCal <= 0) {
-    msg = `すでに目標カロリーに達しています。夕食は <span style="color:#f59e0b;font-weight:700">野菜・タンパク質中心</span> にして、ご飯は控えめにしましょう。`;
-  } else if (riceG <= 0) {
-    msg = `糖質がほぼ上限です。夕食は <span style="color:#f59e0b;font-weight:700">ご飯なし</span> でタンパク質・野菜中心がおすすめです。残り ${remCal} kcal。`;
+  if (riceRemaining <= 0) {
+    msg = `今日の糖質はすでにご飯目標分に達しています。<br>夕食は <span style="color:#f59e0b;font-weight:700">ご飯なし</span> でおかず中心にしましょう。残り ${remCal} kcal。`;
   } else {
-    const pct = Math.round((riceG / 150) * 100);
-    const bowl = riceG >= 200 ? '大盛り' : riceG >= 150 ? '普通盛り' : riceG >= 100 ? '小盛り' : '少量';
-    msg = `残り <span style="color:#f59e0b;font-weight:700">${remCal} kcal</span>・糖質 <span style="color:#818cf8;font-weight:700">${remCarbs}g</span><br>
-🍚 ご飯 <span style="color:#10b981;font-weight:700;font-size:18px">${riceG}g（${bowl}）</span> がおすすめ<br>
-<span style="font-size:12px;color:#555">おかずで残り ${remCalAfterRice} kcal・ご飯以外の糖質も忘れずに</span>`;
+    msg = `ご飯目標 <span style="color:#555">${riceGoal}g</span> のうち既食 ${riceEaten}g・他食材の糖質換算 ${carbsAsRice}g<br>
+🍚 夕食のご飯 <span style="color:#10b981;font-weight:700;font-size:18px">${riceRemaining}g（${bowl}）</span><br>
+<span style="font-size:12px;color:#555">ご飯で ${riceKcal} kcal・おかずで残り ${remCalAfterRice} kcal</span>`;
   }
   contentEl.innerHTML = msg;
 }
