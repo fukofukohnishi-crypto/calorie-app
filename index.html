@@ -369,25 +369,13 @@ async function analyze(mealKey) {
   errEl.style.display = 'none';
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/analyze', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'x-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 1000,
-        system: PROMPT,
-        messages: [{role:'user',content:text}],
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, apiKey }),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error?.message || 'HTTP ' + res.status);
-    const raw = (json.content||[]).map(b=>b.text||'').join('').trim();
-    const cleaned = raw.replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(cleaned);
+    const parsed = await res.json();
+    if (!res.ok) throw new Error(parsed.error || 'HTTP ' + res.status);
     data[mealKey].push({input:text, ...parsed, id:Date.now()});
     renderAll();
   } catch(e) {
