@@ -1,36 +1,75 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>カロリートラッカー</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#07070f;color:#e0e0e0;font-family:'Helvetica Neue','Hiragino Sans',sans-serif;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:40px}
-.header{padding:28px 20px 20px;text-align:center;border-bottom:1px solid #0f0f1c;background:linear-gradient(180deg,#0d0d1a,#07070f)}
-.date-label{font-size:10px;color:#333;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px}
+body{background:#07070f;color:#e0e0e0;font-family:'Helvetica Neue','Hiragino Sans',sans-serif;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:60px}
+input,textarea,button{font-family:inherit}
+textarea{resize:none;outline:none}
+input{outline:none}
+
+/* API Key Screen */
+#api-screen{position:fixed;inset:0;background:#07070f;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;z-index:100}
+#api-screen h2{font-size:20px;font-weight:700;color:#e0e0e0;margin:12px 0 8px;text-align:center}
+#api-screen p{font-size:13px;color:#555;text-align:center;line-height:1.6;margin-bottom:24px}
+.api-textarea{width:100%;background:#0f0f1a;border:1px solid #1a1a2e;border-radius:12px;padding:12px 16px;color:#ccc;font-size:13px;font-family:monospace;line-height:1.5}
+#api-save-btn{margin-top:16px;width:100%;background:#f59e0b;border:none;border-radius:12px;padding:14px;color:#000;font-size:15px;font-weight:700;cursor:pointer}
+.api-note{font-size:11px;color:#333;margin-top:12px;text-align:center}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:50;display:flex;align-items:center;justify-content:center;padding:24px}
+.modal{background:#0f0f1a;border:1px solid #1a1a2e;border-radius:16px;padding:24px;width:100%;max-width:400px}
+.modal h3{font-size:16px;font-weight:700;color:#e0e0e0;margin-bottom:16px}
+.modal-input{width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:10px;padding:10px 14px;color:#e0e0e0;font-size:20px;font-family:monospace;text-align:center}
+.modal-label{font-size:11px;color:#888;margin-bottom:6px;margin-top:12px;display:block}
+.modal-btns{display:flex;gap:10px;margin-top:16px}
+.modal-cancel{flex:1;background:#1a1a2e;border:none;border-radius:10px;padding:12px;color:#666;cursor:pointer}
+.modal-save{flex:1;background:#f59e0b;border:none;border-radius:10px;padding:12px;color:#000;font-weight:700;cursor:pointer}
+
+/* Header */
+.header{padding:24px 20px 20px;border-bottom:1px solid #0f0f1c;background:linear-gradient(180deg,#0d0d1a,#07070f)}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.date-label{font-size:10px;color:#333;letter-spacing:3px;text-transform:uppercase}
+.header-btns{display:flex;gap:6px}
+.hbtn{background:none;border:1px solid #1a1a2e;border-radius:8px;padding:5px 10px;color:#555;font-size:11px;cursor:pointer}
+
+/* Gauge */
 .gauge-wrap{position:relative;width:176px;height:176px;margin:0 auto}
-.gauge-wrap svg{position:absolute;top:0;left:0}
 .gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.gauge-cal{font-size:38px;font-weight:700;line-height:1}
-.gauge-sub{font-size:11px;color:#555;margin-top:2px}
-.gauge-rem{font-size:12px;font-weight:600;margin-top:6px}
-.macros{margin-top:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 16px;text-align:left}
-.macro-label{display:flex;justify-content:space-between;margin-bottom:5px}
-.macro-label span:first-child{font-size:10px;color:#555}
-.macro-label span:last-child{font-size:10px;color:#666}
-.pill-track{height:6px;background:#1a1a2e;border-radius:99px;overflow:hidden}
-.pill-fill{height:100%;border-radius:99px;transition:width .6s ease}
-.seg-bar-wrap{margin-top:14px}
-.seg-bar{height:8px;background:#1a1a2e;border-radius:99px;display:flex;overflow:hidden}
-.seg-legend{display:flex;justify-content:center;gap:14px;margin-top:10px;flex-wrap:wrap}
-.seg-dot{width:7px;height:7px;border-radius:99px;flex-shrink:0}
-.seg-item{display:flex;align-items:center;gap:5px;font-size:11px}
-.sections{padding:14px 14px 0}
-.meal-section{border-radius:16px;overflow:hidden;margin-bottom:10px;border:1px solid #151520;background:#09090f;transition:border-color .3s}
+.gauge-cal{font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.gauge-rem{font-size:12px;font-weight:600;margin-top:8px}
+
+/* Macros */
+.macros{margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 14px}
+.macro-row{display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;color:#555}
+.pill{height:5px;background:#1a1a2e;border-radius:99px;overflow:hidden}
+.pill-fill{height:100%;border-radius:99px;transition:width .5s ease}
+
+/* Segment bar */
+.seg-bar{height:7px;background:#1a1a2e;border-radius:99px;display:flex;overflow:hidden;margin-top:14px}
+.seg-legend{display:flex;justify-content:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+.seg-item{display:flex;align-items:center;gap:4px;font-size:11px;color:#555}
+.seg-dot{width:6px;height:6px;border-radius:99px;flex-shrink:0}
+
+/* Rice advice */
+.rice-box{margin:12px 14px 0;background:linear-gradient(135deg,#0a1a0a,#071207);border:1px solid #10b98128;border-radius:14px;padding:14px;display:none}
+.rice-title{font-size:10px;color:#10b981;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.rice-content{font-size:13px;color:#ccc;line-height:1.8}
+
+/* Tabs */
+.tabs{display:flex;gap:8px;padding:12px 14px 0}
+.tab-btn{flex:1;border:1px solid #151520;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.tab-btn.active{background:#818cf8;color:#000;border-color:#818cf8}
+.tab-btn:not(.active){background:#09090f;color:#555}
+
+/* Meal sections */
+.sections{padding:10px 14px 0}
+.meal-sec{background:#09090f;border:1px solid #151520;border-radius:16px;overflow:hidden;margin-bottom:10px;transition:border-color .3s}
 .meal-header{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
 .meal-emoji{font-size:18px;line-height:1}
 .meal-info{flex:1}
@@ -38,97 +77,100 @@ body{background:#07070f;color:#e0e0e0;font-family:'Helvetica Neue','Hiragino San
 .meal-name{font-size:14px;font-weight:600;color:#ccc}
 .meal-kcal{font-size:13px}
 .meal-count{font-size:10px;color:#444;background:#151520;border-radius:99px;padding:1px 7px}
-.meal-mini-bar{height:3px;background:#151520;border-radius:99px;margin-top:6px;overflow:hidden}
-.meal-mini-fill{height:100%;border-radius:99px;transition:width .6s ease}
+.meal-mini{height:3px;background:#151520;border-radius:99px;margin-top:6px;overflow:hidden}
+.meal-mini-fill{height:100%;border-radius:99px;transition:width .5s ease}
 .meal-arrow{color:#333;font-size:11px}
 .meal-body{border-top:1px solid #151520;padding:12px 14px}
-.entry-card{background:#0c0c1a;border:1px solid #1a1a2e;border-radius:10px;margin-bottom:6px;overflow:hidden}
-.entry-header{padding:10px 13px;cursor:pointer;display:flex;align-items:center;gap:8px}
+
+/* Entry cards */
+.entry{background:#0c0c1a;border:1px solid #1a1a2e;border-radius:10px;margin-bottom:6px;overflow:hidden}
+.entry-head{padding:10px 13px;cursor:pointer;display:flex;align-items:center;gap:8px}
 .entry-text{flex:1;min-width:0}
 .entry-name{font-size:13px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.entry-nums{display:flex;gap:10px;margin-top:3px;font-size:11px;color:#555}
+.entry-nums{display:flex;gap:10px;margin-top:2px;font-size:11px;color:#555}
 .entry-kcal{color:#f59e0b}
-.entry-del{background:none;border:none;color:#333;cursor:pointer;font-size:15px;padding:2px 6px}
-.entry-detail{border-top:1px solid #1a1a2e;padding:11px 13px}
-.entry-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #0f0f1c}
-.entry-row span:first-child{color:#888}
+.entry-del{background:none;border:none;color:#2a2a3e;cursor:pointer;font-size:14px;padding:2px 6px}
+.entry-detail{border-top:1px solid #1a1a2e;padding:11px 13px;display:none}
+.entry-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #0f0f1c;color:#888}
 .entry-row span:last-child{color:#f59e0b}
-.entry-advice{margin-top:10px;padding:9px 11px;background:#080814;border-radius:8px;font-size:12px;color:#888;line-height:1.7}
-.input-box{background:#06060e;border:1px solid #151520;border-radius:11px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
-.input-box.error{border-color:#7f1d1d}
-textarea{width:100%;background:none;border:none;color:#ccc;font-size:13px;font-family:inherit;resize:none;line-height:1.6;outline:none}
-.input-footer{display:flex;justify-content:space-between;align-items:center}
-.input-hint{font-size:10px;color:#333}
-.analyze-btn{border:none;border-radius:9px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:background .2s}
-.error-msg{font-size:11px;color:#f87171;background:#1c0a0a;border-radius:7px;padding:7px 10px;line-height:1.5}
+.advice-box{margin-top:10px;padding:9px 11px;background:#080814;border-radius:8px;font-size:12px;color:#888;line-height:1.7}
+
+/* Input box */
+.input-box{background:#06060e;border:1px solid #151520;border-radius:11px;padding:10px 12px;margin-top:6px}
+.input-box textarea{width:100%;background:none;border:none;color:#ccc;font-size:13px;line-height:1.6}
+.input-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.input-hint{font-size:10px;color:#2a2a3e}
+.analyze-btn{border:none;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px}
+.err-msg{font-size:11px;color:#f87171;background:#1c0a0a;border-radius:7px;padding:6px 10px;margin-top:6px;line-height:1.5;display:none}
+
+/* Weight section */
+.weight-section{padding:10px 14px 0;display:none}
+.w-card{background:#09090f;border:1px solid #151520;border-radius:16px;padding:16px;margin-bottom:12px}
+.w-card-title{font-size:10px;color:#555;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+.w-input-row{display:flex;gap:10px;align-items:center}
+.w-input{flex:1;background:#06060e;border:1px solid #1a1a2e;border-radius:10px;padding:12px;color:#e0e0e0;font-size:24px;font-family:monospace;text-align:center}
+.w-unit{color:#555;font-size:14px}
+.w-save-btn{background:#818cf8;border:none;border-radius:10px;padding:12px 16px;color:#000;font-size:13px;font-weight:700;cursor:pointer}
+.w-compare{margin-top:10px;text-align:center;font-size:14px;min-height:20px}
+.w-list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #0f0f1c;font-size:12px}
+
+/* Spinner */
 .spinner{display:inline-block;width:11px;height:11px;border:2px solid #333;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.api-screen{position:fixed;inset:0;background:#07070f;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;z-index:100}
-.api-screen h2{font-size:20px;font-weight:700;color:#e0e0e0;margin-bottom:8px;text-align:center}
-.api-screen p{font-size:13px;color:#555;text-align:center;line-height:1.6;margin-bottom:24px}
-.api-textarea{width:100%;max-width:400px;background:#0f0f1a;border:1px solid #1a1a2e;border-radius:12px;padding:12px 16px;color:#ccc;font-size:13px;font-family:monospace;resize:none;outline:none;line-height:1.5}
-.api-save-btn{margin-top:16px;width:100%;max-width:400px;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s}
-.api-note{font-size:11px;color:#333;margin-top:16px;text-align:center;line-height:1.6}
-.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;width:100%}
-.key-btn{background:none;border:1px solid #1a1a2e;border-radius:8px;padding:4px 10px;color:#444;font-size:11px;cursor:pointer;font-family:inherit}
-.modal-bg{position:fixed;inset:0;background:#07070fee;z-index:50;display:flex;align-items:center;justify-content:center;padding:24px}
-.modal{background:#0f0f1a;border:1px solid #1a1a2e;border-radius:16px;padding:24px;width:100%;max-width:400px}
-.modal h3{font-size:16px;font-weight:700;color:#e0e0e0;margin-bottom:16px}
-.modal-btns{display:flex;gap:10px;margin-top:14px}
-.modal-cancel{flex:1;background:#1a1a2e;border:none;border-radius:10px;padding:12px;color:#666;font-family:inherit;cursor:pointer}
-.modal-save{flex:1;background:#f59e0b;border:none;border-radius:10px;padding:12px;color:#000;font-weight:700;font-family:inherit;cursor:pointer}
 </style>
 </head>
 <body>
 
-<div id="api-screen" class="api-screen">
-  <div style="font-size:40px;margin-bottom:16px">🔑</div>
+<!-- API Key Screen -->
+<div id="api-screen">
+  <div style="font-size:40px">🔑</div>
   <h2>APIキーを設定</h2>
   <p>platform.claude.com で発行した<br>APIキーを貼り付けてください</p>
   <textarea id="api-input" class="api-textarea" rows="3" placeholder="sk-ant-api..."></textarea>
-  <button id="api-save-btn" class="api-save-btn" style="background:#f59e0b;color:#000">保存して開始</button>
+  <button id="api-save-btn" onclick="saveApiKey()">保存して開始</button>
   <p class="api-note">キーはこの端末のみに保存されます</p>
 </div>
 
-<div id="modal-bg" class="modal-bg" style="display:none">
+<!-- Key Modal -->
+<div id="key-modal" class="modal-bg" style="display:none">
   <div class="modal">
     <h3>APIキーを変更</h3>
-    <textarea id="modal-input" class="api-textarea" rows="3"></textarea>
+    <textarea id="key-modal-input" class="api-textarea" rows="3"></textarea>
     <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeModal()">キャンセル</button>
-      <button class="modal-save" onclick="saveModalKey()">保存</button>
+      <button class="modal-cancel" onclick="closeKeyModal()">キャンセル</button>
+      <button class="modal-save" onclick="saveKeyModal()">保存</button>
     </div>
   </div>
 </div>
 
-<div id="goal-bg" class="modal-bg" style="display:none">
+<!-- Goal Modal -->
+<div id="goal-modal" class="modal-bg" style="display:none">
   <div class="modal">
-    <h3>🎯 目標カロリー設定</h3>
-    <div style="margin-top:12px;display:flex;flex-direction:column;gap:12px">
-      <div>
-        <div style="font-size:11px;color:#888;margin-bottom:8px">1日の目標カロリー (kcal)</div>
-        <input id="goal-input" type="number" style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:12px;color:#e0e0e0;font-size:20px;font-family:monospace;outline:none;text-align:center">
-      </div>
-      <div>
-        <div style="font-size:11px;color:#888;margin-bottom:8px">1日のご飯目標 (g)</div>
-        <input id="goal-rice-input" type="number" style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:12px;color:#e0e0e0;font-size:20px;font-family:monospace;outline:none;text-align:center">
-        <div style="font-size:10px;color:#333;margin-top:6px;text-align:center">ご飯以外の糖質は自動でご飯量に換算して引き算します</div>
-      </div>
-    </div>
+    <h3>🎯 目標設定</h3>
+    <label class="modal-label">1日の目標カロリー (kcal)</label>
+    <input id="goal-cal-input" class="modal-input" type="number" placeholder="1800">
+    <label class="modal-label">1日のご飯目標 (g)</label>
+    <input id="goal-rice-input" class="modal-input" type="number" placeholder="600">
+    <div style="font-size:10px;color:#333;margin-top:6px;text-align:center">ご飯以外の糖質は自動でご飯換算して引き算します</div>
     <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeGoal()">キャンセル</button>
-      <button class="modal-save" onclick="saveGoal()">保存</button>
+      <button class="modal-cancel" onclick="closeGoalModal()">キャンセル</button>
+      <button class="modal-save" onclick="saveGoalModal()">保存</button>
     </div>
   </div>
 </div>
+
+<!-- App -->
 <div id="app" style="display:none">
   <div class="header">
     <div class="top-bar">
       <div class="date-label" id="date-label"></div>
-      <div style="display:flex;gap:6px"><button class="key-btn" onclick="openGoal()">🎯 目標</button><button class="key-btn" onclick="openModal()">⚙️ APIキー</button></div>
+      <div class="header-btns">
+        <button class="hbtn" onclick="openGoalModal()">🎯 目標</button>
+        <button class="hbtn" onclick="openKeyModal()">⚙️ APIキー</button>
+      </div>
     </div>
     <div class="gauge-wrap">
-      <svg width="176" height="176" id="gauge-svg">
+      <svg width="176" height="176" style="position:absolute;top:0;left:0">
         <circle cx="88" cy="88" r="76" fill="none" stroke="#1a1a2e" stroke-width="10"/>
         <circle id="gauge-arc" cx="88" cy="88" r="76" fill="none" stroke="#22d3ee" stroke-width="10"
           stroke-linecap="round" stroke-dasharray="477.5" stroke-dashoffset="477.5"
@@ -136,212 +178,289 @@ textarea{width:100%;background:none;border:none;color:#ccc;font-size:13px;font-f
       </svg>
       <div class="gauge-center">
         <div class="gauge-cal" id="gauge-cal" style="color:#22d3ee">0</div>
-        <div class="gauge-sub" id="gauge-sub-label">/ 1800 kcal</div>
         <div class="gauge-rem" id="gauge-rem" style="color:#666">残り 1800 kcal</div>
       </div>
     </div>
     <div class="macros">
       <div>
-        <div class="macro-label"><span>脂質</span><span id="fat-val">0g</span></div>
-        <div class="pill-track"><div class="pill-fill" id="fat-bar" style="width:0%;background:#ec4899"></div></div>
+        <div class="macro-row"><span>脂質</span><span id="fat-val">0g</span></div>
+        <div class="pill"><div class="pill-fill" id="fat-bar" style="width:0%;background:#ec4899"></div></div>
       </div>
       <div>
-        <div class="macro-label"><span>糖質</span><span id="carbs-val">0g</span></div>
-        <div class="pill-track"><div class="pill-fill" id="carbs-bar" style="width:0%;background:#818cf8"></div></div>
+        <div class="macro-row"><span>糖質</span><span id="carbs-val">0g</span></div>
+        <div class="pill"><div class="pill-fill" id="carbs-bar" style="width:0%;background:#818cf8"></div></div>
       </div>
       <div>
-        <div class="macro-label"><span>タンパク質</span><span id="protein-val">0g</span></div>
-        <div class="pill-track"><div class="pill-fill" id="protein-bar" style="width:0%;background:#22d3ee"></div></div>
+        <div class="macro-row"><span>タンパク質</span><span id="protein-val">0g</span></div>
+        <div class="pill"><div class="pill-fill" id="protein-bar" style="width:0%;background:#22d3ee"></div></div>
       </div>
     </div>
-    <div class="seg-bar-wrap">
-      <div class="seg-bar" id="seg-bar"></div>
-      <div class="seg-legend" id="seg-legend"></div>
+    <div class="seg-bar" id="seg-bar"></div>
+    <div class="seg-legend" id="seg-legend"></div>
+  </div>
+
+  <div class="rice-box" id="rice-box">
+    <div class="rice-title">🍚 夕食のご飯量アドバイス</div>
+    <div class="rice-content" id="rice-content"></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-food" onclick="showTab('food')">🍽️ 食事</button>
+    <button class="tab-btn" id="tab-weight" onclick="showTab('weight')">⚖️ 体重</button>
+  </div>
+
+  <div class="sections" id="sections"></div>
+
+  <div class="weight-section" id="weight-section">
+    <div class="w-card">
+      <div class="w-card-title">今日の体重</div>
+      <div class="w-input-row">
+        <input id="w-input" class="w-input" type="number" step="0.1" placeholder="00.0">
+        <span class="w-unit">kg</span>
+        <button class="w-save-btn" onclick="saveWeight()">記録</button>
+      </div>
+      <div class="w-compare" id="w-compare"></div>
+    </div>
+    <div class="w-card">
+      <div class="w-card-title">体重推移（14日）</div>
+      <canvas id="w-chart" style="width:100%;height:160px;display:block"></canvas>
+      <div id="w-list" style="margin-top:12px"></div>
     </div>
   </div>
-  <div style="display:flex;gap:8px;padding:14px 14px 0">
-  <button onclick="showTab('food')" id="tab-food" style="flex:1;background:#818cf8;border:none;border-radius:10px;padding:10px;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🍽️ 食事</button>
-  <button onclick="showTab('weight')" id="tab-weight" style="flex:1;background:#09090f;border:1px solid #151520;border-none;border-radius:10px;padding:10px;color:#555;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⚖️ 体重</button>
-</div>
-<div class="sections" id="sections"></div>
-
-<div id="rice-advice" style="display:none;margin:0 14px 10px">
-  <div style="background:linear-gradient(135deg,#0f1a0f,#091409);border:1px solid #10b98130;border-radius:16px;padding:16px">
-    <div style="font-size:11px;color:#10b981;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">🍚 夕食のご飯量アドバイス</div>
-    <div id="rice-advice-content" style="font-size:14px;color:#ccc;line-height:1.7"></div>
-  </div>
-</div>
-<div id="weight-section" style="display:none;padding:0 14px 20px">
-  <!-- Weight input -->
-  <div style="background:#09090f;border:1px solid #151520;border-radius:16px;padding:16px;margin-bottom:12px">
-    <div style="font-size:12px;color:#555;margin-bottom:10px;letter-spacing:1px;text-transform:uppercase">今日の体重</div>
-    <div style="display:flex;gap:10px;align-items:center">
-      <input id="weight-input" type="number" step="0.1" placeholder="00.0" style="flex:1;background:#06060e;border:1px solid #1a1a2e;border-radius:10px;padding:12px;color:#e0e0e0;font-size:24px;font-family:monospace;outline:none;text-align:center">
-      <span style="color:#555;font-size:14px">kg</span>
-      <button onclick="saveWeight()" style="background:#818cf8;border:none;border-radius:10px;padding:12px 18px;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">記録</button>
-    </div>
-    <div id="weight-compare" style="margin-top:12px;text-align:center;font-size:14px;color:#555"></div>
-  </div>
-
-  <!-- Graph -->
-
-  <div style="background:#09090f;border:1px solid #151520;border-radius:16px;padding:16px">
-    <div style="font-size:12px;color:#555;margin-bottom:14px;letter-spacing:1px;text-transform:uppercase">体重推移（14日）</div>
-    <canvas id="weight-chart" style="width:100%;height:180px"></canvas>
-    <div id="weight-list" style="margin-top:14px"></div>
-  </div>
-</div>
 </div>
 
 <script>
-let GOAL = {calories: 1800, rice: 600, fat:60, carbs:220, protein:80};
-function loadGoals() {
-  const c = parseInt(localStorage.getItem('goal_cal'));
-  const r = parseInt(localStorage.getItem('goal_rice'));
-  if (c > 0) GOAL.calories = c;
-  if (r > 0) GOAL.rice = r;
-}
 const MEALS = [
-  {key:'morning',label:'朝食',emoji:'🌅',color:'#f59e0b'},
-  {key:'lunch',label:'昼食',emoji:'☀️',color:'#10b981'},
-  {key:'snack',label:'おやつ',emoji:'🍪',color:'#ec4899'},
-  {key:'dinner',label:'夕食',emoji:'🌙',color:'#818cf8'},
+  {key:'morning', label:'朝食',   emoji:'🌅', color:'#f59e0b'},
+  {key:'lunch',   label:'昼食',   emoji:'☀️',  color:'#10b981'},
+  {key:'snack',   label:'おやつ', emoji:'🍪', color:'#ec4899'},
+  {key:'dinner',  label:'夕食',   emoji:'🌙', color:'#818cf8'},
 ];
-const PROMPT = `あなたは栄養士AIです。食事の入力からJSONのみを返してください。前置き・説明・マークダウンは不要です。
-{"meals":[{"name":"食品名","calories":整数,"fat":整数,"carbs":整数,"protein":整数,"amount":"量"}],"total":{"calories":整数,"fat":整数,"carbs":整数,"protein":整数},"advice":"アドバイス2文","score":整数}
-量不明は一般的な一人前で推定。`;
+const RICE_CARBS = 37; // per 100g
 
-let apiKey = localStorage.getItem('calorie_api_key') || '';
-let data = {morning:[],lunch:[],snack:[],dinner:[]};
-let openSections = {morning:true,lunch:true,snack:true,dinner:true};
+// State
+let apiKey = '';
+let goalCal = 1800;
+let goalRice = 600;
+let mealData = {morning:[], lunch:[], snack:[], dinner:[]};
+let weightData = {};
+let openSecs = {morning:true, lunch:true, snack:true, dinner:true};
 
-// API Key setup
-const apiScreen = document.getElementById('api-screen');
-const appDiv = document.getElementById('app');
-const apiInput = document.getElementById('api-input');
-const apiSaveBtn = document.getElementById('api-save-btn');
+// Load from localStorage safely
+function loadState() {
+  try {
+    apiKey = localStorage.getItem('c_apikey') || '';
+    goalCal = parseInt(localStorage.getItem('c_goalcal')) || 1800;
+    goalRice = parseInt(localStorage.getItem('c_goalrice')) || 600;
+    weightData = JSON.parse(localStorage.getItem('c_weight') || '{}');
+  } catch(e) {}
+}
 
-apiInput.addEventListener('input', () => {
-  
-  
-  
-});
-apiSaveBtn.addEventListener('click', () => {
-  const v = apiInput.value.trim();
-  
+function saveGoals() {
+  try {
+    localStorage.setItem('c_goalcal', goalCal);
+    localStorage.setItem('c_goalrice', goalRice);
+  } catch(e) {}
+}
+
+function saveApiKey() {
+  const v = document.getElementById('api-input').value.trim();
+  if (!v) return;
+  try { localStorage.setItem('c_apikey', v); } catch(e) {}
   apiKey = v;
-  localStorage.setItem('calorie_api_key', v);
-  apiScreen.style.display = 'none';
-  appDiv.style.display = 'block';
-  init();
-});
-
-function openModal() {
-  document.getElementById('modal-input').value = apiKey;
-  document.getElementById('modal-bg').style.display = 'flex';
-}
-function closeModal() { document.getElementById('modal-bg').style.display = 'none'; }
-function saveModalKey() {
-  const v = document.getElementById('modal-input').value.trim();
-  if (v) { apiKey = v; localStorage.setItem('calorie_api_key', v); }
-  closeModal();
+  document.getElementById('api-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  startApp();
 }
 
-function openGoal() {
-  document.getElementById('goal-input').value = GOAL.calories;
-  document.getElementById('goal-rice-input').value = GOAL.rice;
-  document.getElementById('goal-bg').style.display = 'flex';
+function openKeyModal() {
+  document.getElementById('key-modal-input').value = apiKey;
+  document.getElementById('key-modal').style.display = 'flex';
 }
-function closeGoal() { document.getElementById('goal-bg').style.display = 'none'; }
-function saveGoal() {
-  const v = parseInt(document.getElementById('goal-input').value);
+function closeKeyModal() { document.getElementById('key-modal').style.display = 'none'; }
+function saveKeyModal() {
+  const v = document.getElementById('key-modal-input').value.trim();
+  if (v) { apiKey = v; try { localStorage.setItem('c_apikey', v); } catch(e) {} }
+  closeKeyModal();
+}
+
+function openGoalModal() {
+  document.getElementById('goal-cal-input').value = goalCal;
+  document.getElementById('goal-rice-input').value = goalRice;
+  document.getElementById('goal-modal').style.display = 'flex';
+}
+function closeGoalModal() { document.getElementById('goal-modal').style.display = 'none'; }
+function saveGoalModal() {
+  const c = parseInt(document.getElementById('goal-cal-input').value);
   const r = parseInt(document.getElementById('goal-rice-input').value);
-  if (v > 0) { GOAL.calories = v; localStorage.setItem('goal_cal', v); }
-  if (r > 0) { GOAL.rice = r; localStorage.setItem('goal_rice', r); }
+  if (c > 0) goalCal = c;
+  if (r > 0) goalRice = r;
+  saveGoals();
   renderAll();
-  closeGoal();
+  closeGoalModal();
 }
 
-function init() {
-  loadGoals();
-  // Date
-  document.getElementById('date-label').textContent =
-    new Date().toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
-  renderAll();
+function showTab(tab) {
+  const isFood = tab === 'food';
+  document.getElementById('sections').style.display = isFood ? 'block' : 'none';
+  document.getElementById('weight-section').style.display = isFood ? 'none' : 'block';
+  document.getElementById('rice-box').style.display = isFood ? '' : 'none';
+  document.getElementById('tab-food').className = 'tab-btn' + (isFood ? ' active' : '');
+  document.getElementById('tab-weight').className = 'tab-btn' + (!isFood ? ' active' : '');
+  if (!isFood) renderWeightSection();
 }
 
-function getTotals() {
-  return Object.values(data).flat().reduce((a,e)=>({
-    calories: a.calories+(e.total?.calories||0),
-    fat: a.fat+(e.total?.fat||0),
-    carbs: a.carbs+(e.total?.carbs||0),
-    protein: a.protein+(e.total?.protein||0),
-  }),{calories:0,fat:0,carbs:0,protein:0});
+function getTotals(keys) {
+  keys = keys || ['morning','lunch','snack','dinner'];
+  return keys.reduce((acc, key) => {
+    (mealData[key]||[]).forEach(e => {
+      acc.calories += e.total?.calories || 0;
+      acc.fat      += e.total?.fat      || 0;
+      acc.carbs    += e.total?.carbs    || 0;
+      acc.protein  += e.total?.protein  || 0;
+    });
+    return acc;
+  }, {calories:0, fat:0, carbs:0, protein:0});
 }
 
 function renderGauge(t) {
-  const pct = Math.min(1, t.calories / GOAL.calories);
-  const over = t.calories > GOAL.calories;
+  const pct = Math.min(1, t.calories / goalCal);
+  const over = t.calories > goalCal;
   const color = over ? '#ef4444' : pct > 0.85 ? '#f97316' : pct > 0.55 ? '#f59e0b' : '#22d3ee';
   const circ = 2 * Math.PI * 76;
   const arc = document.getElementById('gauge-arc');
   arc.style.strokeDashoffset = circ * (1 - pct);
   arc.style.stroke = color;
-  const subLabel = document.getElementById('gauge-sub-label');
-  if (subLabel) subLabel.textContent = '/ ' + GOAL.calories + ' kcal';
   const calEl = document.getElementById('gauge-cal');
   calEl.textContent = t.calories;
   calEl.style.color = color;
   const remEl = document.getElementById('gauge-rem');
-  remEl.textContent = over ? `+${t.calories - GOAL.calories} 超過` : `残り ${GOAL.calories - t.calories} kcal`;
+  remEl.textContent = over ? `+${t.calories - goalCal} kcal 超過` : `残り ${goalCal - t.calories} kcal`;
   remEl.style.color = over ? '#ef4444' : '#666';
 }
 
 function renderMacros(t) {
+  const GOAL = {fat:60, carbs:220, protein:80};
   document.getElementById('fat-val').textContent = t.fat + 'g';
   document.getElementById('carbs-val').textContent = t.carbs + 'g';
   document.getElementById('protein-val').textContent = t.protein + 'g';
-  document.getElementById('fat-bar').style.width = Math.min(100, t.fat/GOAL.fat*100) + '%';
-  document.getElementById('carbs-bar').style.width = Math.min(100, t.carbs/GOAL.carbs*100) + '%';
-  document.getElementById('protein-bar').style.width = Math.min(100, t.protein/GOAL.protein*100) + '%';
-  document.getElementById('fat-bar').style.background = t.fat > GOAL.fat ? '#ef4444' : '#ec4899';
-  document.getElementById('carbs-bar').style.background = t.carbs > GOAL.carbs ? '#ef4444' : '#818cf8';
-  document.getElementById('protein-bar').style.background = t.protein > GOAL.protein ? '#ef4444' : '#22d3ee';
+  ['fat','carbs','protein'].forEach(k => {
+    const bar = document.getElementById(k + '-bar');
+    const pct = Math.min(100, t[k] / GOAL[k] * 100);
+    bar.style.width = pct + '%';
+    bar.style.background = t[k] > GOAL[k] ? '#ef4444' : bar.style.background;
+  });
 }
 
 function renderSegBar() {
   const bar = document.getElementById('seg-bar');
   const legend = document.getElementById('seg-legend');
-  bar.innerHTML = '';
-  legend.innerHTML = '';
+  bar.innerHTML = ''; legend.innerHTML = '';
   MEALS.forEach(m => {
-    const cal = (data[m.key]||[]).reduce((s,e)=>s+(e.total?.calories||0),0);
-    const w = Math.min(100, cal/GOAL.calories*100);
-    const div = document.createElement('div');
-    div.style.cssText = `width:${w}%;background:${m.color};transition:width .6s ease`;
-    bar.appendChild(div);
+    const cal = (mealData[m.key]||[]).reduce((s,e)=>s+(e.total?.calories||0),0);
+    const w = Math.min(100, cal / goalCal * 100);
+    const d = document.createElement('div');
+    d.style.cssText = `width:${w}%;background:${m.color};transition:width .5s`;
+    bar.appendChild(d);
     const item = document.createElement('div');
     item.className = 'seg-item';
-    item.innerHTML = `<div class="seg-dot" style="background:${m.color}"></div><span style="color:#555">${m.label}</span><span style="color:${cal>0?m.color:'#333'}">${cal>0?cal:'—'}</span>`;
+    item.innerHTML = `<div class="seg-dot" style="background:${m.color}"></div>${m.label}<span style="color:${cal>0?m.color:'#333'}">${cal>0?cal:'—'}</span>`;
     legend.appendChild(item);
   });
+}
+
+function renderRiceAdvice() {
+  const box = document.getElementById('rice-box');
+  const content = document.getElementById('rice-content');
+  const hasDinner = (mealData.dinner||[]).length > 0;
+  const sofar = getTotals(['morning','lunch','snack']);
+  if (sofar.calories === 0) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+
+  if (hasDinner) {
+    const all = getTotals();
+    const diff = all.calories - goalCal;
+    if (diff > 100) content.innerHTML = `今日は <span style="color:#ef4444;font-weight:700">+${diff} kcal 超過</span>。明日は少し控えめに。`;
+    else if (diff < -200) content.innerHTML = `まだ <span style="color:#10b981;font-weight:700">${Math.abs(diff)} kcal</span> 余裕あり。`;
+    else content.innerHTML = `<span style="color:#10b981;font-weight:700">今日はほぼ目標通り👍</span>`;
+    return;
+  }
+
+  // Calculate rice remaining
+  let riceEatenG = 0;
+  let nonRiceCarbs = 0;
+  ['morning','lunch','snack'].forEach(key => {
+    (mealData[key]||[]).forEach(e => {
+      (e.meals||[]).forEach(m => {
+        const name = m.name || '';
+        const isRice = /ご飯|ごはん|白米|玄米|rice/i.test(name);
+        if (isRice) {
+          const gm = (m.amount||'').match(/(\d+)\s*g/);
+          const bm = (m.amount||'').match(/(\d+)\s*(杯|膳)/);
+          if (gm) riceEatenG += parseInt(gm[1]);
+          else if (bm) riceEatenG += parseInt(bm[1]) * 150;
+          else riceEatenG += Math.round((m.carbs||0) / RICE_CARBS * 100);
+        } else {
+          nonRiceCarbs += m.carbs || 0;
+        }
+      });
+    });
+  });
+
+  const nonRiceAsRiceG = Math.round(nonRiceCarbs / RICE_CARBS * 100);
+  const riceRem = Math.max(0, goalRice - riceEatenG - nonRiceAsRiceG);
+  const remCal = goalCal - sofar.calories;
+  const riceKcal = Math.round(riceRem * 1.68);
+  const remCalAfterRice = remCal - riceKcal;
+  const bowl = riceRem >= 250 ? '大盛り' : riceRem >= 180 ? '普通盛り' : riceRem >= 120 ? '小盛り' : riceRem >= 60 ? '少量' : 'なし';
+
+  if (riceRem <= 0) {
+    content.innerHTML = `今日の糖質はご飯目標分に達しています。夕食は <span style="color:#f59e0b;font-weight:700">ご飯なし</span> でおかず中心に。残り ${remCal} kcal。`;
+  } else {
+    content.innerHTML = `
+      ご飯目標 ${goalRice}g のうち既食 ${riceEatenG}g・他食材換算 ${nonRiceAsRiceG}g<br>
+      🍚 夕食のご飯 <span style="color:#10b981;font-weight:700;font-size:17px">${riceRem}g（${bowl}）</span><br>
+      <span style="font-size:12px;color:#555">ご飯で ${riceKcal} kcal・おかずで残り ${remCalAfterRice} kcal</span>
+    `;
+  }
 }
 
 function renderSections() {
   const sec = document.getElementById('sections');
   sec.innerHTML = '';
   MEALS.forEach(m => {
-    const entries = data[m.key] || [];
+    const entries = mealData[m.key] || [];
     const total = entries.reduce((s,e)=>s+(e.total?.calories||0),0);
-    const isOpen = openSections[m.key];
-    const miniW = Math.min(100, total/(GOAL.calories*0.35)*100);
+    const isOpen = openSecs[m.key];
+    const miniW = Math.min(100, total / (goalCal * 0.35) * 100);
 
-    const section = document.createElement('div');
-    section.className = 'meal-section';
-    if (entries.length > 0) section.style.borderColor = m.color + '30';
+    const div = document.createElement('div');
+    div.className = 'meal-sec';
+    if (entries.length > 0) div.style.borderColor = m.color + '30';
 
-    section.innerHTML = `
-      <div class="meal-header" onclick="toggleSection('${m.key}')">
+    let entriesHTML = entries.map((e, i) => `
+      <div class="entry" id="entry-${m.key}-${i}">
+        <div class="entry-head" onclick="toggleEntry('${m.key}',${i})">
+          <div class="entry-text">
+            <div class="entry-name">${e.input}</div>
+            <div class="entry-nums">
+              <span class="entry-kcal">${e.total?.calories||0} kcal</span>
+              <span>脂 ${e.total?.fat||0}g</span>
+              <span>糖 ${e.total?.carbs||0}g</span>
+              <span>P ${e.total?.protein||0}g</span>
+            </div>
+          </div>
+          <button class="entry-del" onclick="event.stopPropagation();deleteEntry('${m.key}',${i})">✕</button>
+        </div>
+        <div class="entry-detail" id="detail-${m.key}-${i}">
+          ${(e.meals||[]).map(f=>`<div class="entry-row"><span>${f.name} <span style="color:#333">(${f.amount})</span></span><span>${f.calories} kcal</span></div>`).join('')}
+          ${e.advice ? `<div class="advice-box">💬 ${e.advice}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    div.innerHTML = `
+      <div class="meal-header" onclick="toggleSec('${m.key}')">
         <span class="meal-emoji">${m.emoji}</span>
         <div class="meal-info">
           <div class="meal-title-row">
@@ -349,377 +468,222 @@ function renderSections() {
             ${total > 0 ? `<span class="meal-kcal" style="color:${m.color}">${total} kcal</span>` : ''}
             ${entries.length > 0 ? `<span class="meal-count">${entries.length}件</span>` : ''}
           </div>
-          <div class="meal-mini-bar">
-            <div class="meal-mini-fill" style="width:${miniW}%;background:${m.color};box-shadow:${total>0?`0 0 6px ${m.color}80`:'none'}"></div>
-          </div>
+          <div class="meal-mini"><div class="meal-mini-fill" style="width:${miniW}%;background:${m.color}"></div></div>
         </div>
         <span class="meal-arrow">${isOpen ? '▲' : '▼'}</span>
       </div>
       ${isOpen ? `
       <div class="meal-body">
-        ${entries.map((e,i) => renderEntry(m.key, e, i)).join('')}
-        <div class="input-box" id="input-box-${m.key}">
+        ${entriesHTML}
+        <div class="input-box">
           <textarea id="ta-${m.key}" rows="2" placeholder="${m.label}を入力… 例: ご飯1杯・鮭の塩焼き"></textarea>
+          <div class="input-footer">
+            <span class="input-hint">Enterで送信</span>
+            <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
+          </div>
+          <div class="err-msg" id="err-${m.key}"></div>
+        </div>
+      </div>` : ''}
+    `;
+    sec.appendChild(div);
 
-```
-      <div class="input-footer">
-        <span class="input-hint">Enterで送信</span>
-        <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
-      </div>
-      <div class="error-msg" id="err-${m.key}" style="display:none"></div>
-    </div>
-  </div>` : ''}
-`;
-sec.appendChild(section);
-
-// textarea enter key
-if (isOpen) {
-  const ta = document.getElementById(`ta-${m.key}`);
-  ta.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); analyze(m.key); }
+    if (isOpen) {
+      const ta = document.getElementById(`ta-${m.key}`);
+      if (ta) ta.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); analyze(m.key); }
+      });
+    }
   });
-}
-```
-
-});
-}
-
-function renderEntry(mealKey, entry, idx) {
-const id = `entry-${mealKey}-${idx}`;
-return ` <div class="entry-card" id="${id}"> <div class="entry-header" onclick="toggleEntry('${id}')"> <div class="entry-text"> <div class="entry-name">${entry.input}</div> <div class="entry-nums"> <span class="entry-kcal">${entry.total?.calories||0} kcal</span> <span>脂 ${entry.total?.fat||0}g</span> <span>糖 ${entry.total?.carbs||0}g</span> <span>P ${entry.total?.protein||0}g</span> </div> </div> <button class="entry-del" onclick="event.stopPropagation();deleteEntry('${mealKey}',${idx})">✕</button> </div> <div class="entry-detail" id="detail-${id}" style="display:none"> ${(entry.meals||[]).map(m=>`
-<div class="entry-row">
-<span>${m.name} <span style="color:#444">(${m.amount})</span></span>
-<span>${m.calories} kcal</span>
-</div>`).join('')} ${entry.advice ? `<div class="entry-advice">💬 ${entry.advice}</div>` : ''} </div> </div>`;
-}
-
-function toggleSection(key) {
-openSections[key] = !openSections[key];
-renderAll();
-}
-
-function toggleEntry(id) {
-const el = document.getElementById(‘detail-’ + id);
-if (el) el.style.display = el.style.display === ‘none’ ? ‘block’ : ‘none’;
-}
-
-function deleteEntry(mealKey, idx) {
-data[mealKey].splice(idx, 1);
-renderAll();
 }
 
 function renderAll() {
-const t = getTotals();
-renderGauge(t);
-renderMacros(t);
-renderSegBar();
-renderSections();
-calcRiceAdvice();
+  const t = getTotals();
+  renderGauge(t);
+  renderMacros(t);
+  renderSegBar();
+  renderSections();
+  renderRiceAdvice();
+}
+
+function toggleSec(key) {
+  openSecs[key] = !openSecs[key];
+  renderAll();
+}
+
+function toggleEntry(key, idx) {
+  const el = document.getElementById(`detail-${key}-${idx}`);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function deleteEntry(key, idx) {
+  mealData[key].splice(idx, 1);
+  renderAll();
 }
 
 async function analyze(mealKey) {
-const ta = document.getElementById(`ta-${mealKey}`);
-const btn = document.getElementById(`btn-${mealKey}`);
-const errEl = document.getElementById(`err-${mealKey}`);
-const text = ta.value.trim();
-if (!text) return;
+  const ta = document.getElementById(`ta-${mealKey}`);
+  const btn = document.getElementById(`btn-${mealKey}`);
+  const err = document.getElementById(`err-${mealKey}`);
+  const text = ta.value.trim();
+  if (!text) return;
 
-const mealColor = MEALS.find(m=>m.key===mealKey).color;
-btn.disabled = true;
-btn.innerHTML = ‘<span class="spinner"></span> 解析中…’;
-btn.style.background = ‘#1a1a2e’;
-btn.style.color = ‘#555’;
-errEl.style.display = ‘none’;
+  const color = MEALS.find(m=>m.key===mealKey).color;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 解析中…';
+  btn.style.background = '#1a1a2e';
+  btn.style.color = '#555';
+  err.style.display = 'none';
 
-try {
-const res = await fetch(’/api/analyze’, {
-method: ‘POST’,
-headers: { ‘Content-Type’: ‘application/json’ },
-body: JSON.stringify({ text, apiKey }),
-});
-const parsed = await res.json();
-if (!res.ok) throw new Error(parsed.error || ’HTTP ’ + res.status);
-data[mealKey].push({input:text, …parsed, id:Date.now()});
-renderAll();
-} catch(e) {
-errEl.textContent = ’⚠️ ’ + e.message;
-errEl.style.display = ‘block’;
-btn.disabled = false;
-btn.innerHTML = ‘解析する’;
-btn.style.background = mealColor;
-btn.style.color = ‘#000’;
-}
-}
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text, apiKey}),
+    });
+    const parsed = await res.json();
+    if (!res.ok) throw new Error(parsed.error || 'HTTP ' + res.status);
+    mealData[mealKey].push({input:text, ...parsed, id:Date.now()});
+    ta.value = '';
+    renderAll();
+  } catch(e) {
+    err.textContent = '⚠️ ' + e.message;
+    err.style.display = 'block';
+  }
 
-// Weight functions
-let weightData = JSON.parse(localStorage.getItem(‘weight_data’) || ‘{}’);
-
-function showTab(tab) {
-const isFood = tab === ‘food’;
-document.getElementById(‘sections’).style.display = isFood ? ‘block’ : ‘none’;
-document.getElementById(‘weight-section’).style.display = isFood ? ‘none’ : ‘block’;
-document.getElementById(‘tab-food’).style.background = isFood ? ‘#818cf8’ : ‘#09090f’;
-document.getElementById(‘tab-food’).style.color = isFood ? ‘#000’ : ‘#555’;
-document.getElementById(‘tab-food’).style.border = isFood ? ‘none’ : ‘1px solid #151520’;
-document.getElementById(‘tab-weight’).style.background = isFood ? ‘#09090f’ : ‘#818cf8’;
-document.getElementById(‘tab-weight’).style.color = isFood ? ‘#555’ : ‘#000’;
-document.getElementById(‘tab-weight’).style.border = isFood ? ‘1px solid #151520’ : ‘none’;
-if (!isFood) renderWeightSection();
+  btn.disabled = false;
+  btn.innerHTML = '解析する';
+  btn.style.background = color;
+  btn.style.color = '#000';
 }
 
-function getTodayStr() {
-return new Date().toISOString().slice(0, 10);
-}
+// Weight
+function todayStr() { return new Date().toISOString().slice(0,10); }
 
 function saveWeight() {
-const val = parseFloat(document.getElementById(‘weight-input’).value);
-if (!val || val < 20 || val > 300) return;
-const today = getTodayStr();
-weightData[today] = val;
-localStorage.setItem(‘weight_data’, JSON.stringify(weightData));
-renderWeightSection();
+  const v = parseFloat(document.getElementById('w-input').value);
+  if (!v || v < 20 || v > 300) return;
+  weightData[todayStr()] = v;
+  try { localStorage.setItem('c_weight', JSON.stringify(weightData)); } catch(e) {}
+  renderWeightSection();
 }
 
 function renderWeightSection() {
-const today = getTodayStr();
-const keys = Object.keys(weightData).sort();
-const todayVal = weightData[today];
+  const today = todayStr();
+  if (weightData[today]) document.getElementById('w-input').value = weightData[today];
 
-// Set today’s input
-if (todayVal) document.getElementById(‘weight-input’).value = todayVal;
+  const cmp = document.getElementById('w-compare');
+  const yest = new Date(); yest.setDate(yest.getDate()-1);
+  const yKey = yest.toISOString().slice(0,10);
+  const yVal = weightData[yKey];
+  const tVal = weightData[today];
+  if (tVal && yVal) {
+    const diff = (tVal - yVal).toFixed(1);
+    const color = diff > 0 ? '#ef4444' : diff < 0 ? '#10b981' : '#555';
+    const emoji = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
+    cmp.innerHTML = `<span style="color:${color};font-size:15px;font-weight:700">${emoji} 前日比 ${diff>0?'+':''}${diff} kg</span>`;
+  } else {
+    cmp.innerHTML = tVal ? '<span style="color:#555;font-size:12px">前日のデータなし</span>' : '';
+  }
 
-// Compare with yesterday
-const compareEl = document.getElementById(‘weight-compare’);
-const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-const yKey = yesterday.toISOString().slice(0, 10);
-const yVal = weightData[yKey];
-if (todayVal && yVal) {
-const diff = (todayVal - yVal).toFixed(1);
-const sign = diff > 0 ? ‘+’ : ‘’;
-const color = diff > 0 ? ‘#ef4444’ : diff < 0 ? ‘#10b981’ : ‘#555’;
-const emoji = diff > 0 ? ‘📈’ : diff < 0 ? ‘📉’ : ‘➡️’;
-compareEl.innerHTML = `<span style="color:${color};font-size:16px;font-weight:700">${emoji} 前日比 ${sign}${diff} kg</span>`;
-} else if (todayVal) {
-compareEl.innerHTML = ‘<span style="color:#555;font-size:12px">前日のデータなし</span>’;
-} else {
-compareEl.innerHTML = ‘’;
+  drawChart();
+
+  const keys = Object.keys(weightData).sort().slice(-7).reverse();
+  const list = document.getElementById('w-list');
+  list.innerHTML = keys.map(k => {
+    const d = new Date(k+'T00:00:00');
+    const label = d.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric',weekday:'short'});
+    const val = weightData[k];
+    const allKeys = Object.keys(weightData).sort();
+    const prev = weightData[allKeys[allKeys.indexOf(k)-1]];
+    let diffStr = '';
+    if (prev) {
+      const df = (val-prev).toFixed(1);
+      diffStr = `<span style="font-size:11px;color:${df>0?'#ef4444':df<0?'#10b981':'#555'}">${df>0?'+':''}${df}</span>`;
+    }
+    const isToday = k === today;
+    return `<div class="w-list-item">
+      <span style="color:${isToday?'#818cf8':'#666'}">${label}${isToday?' 今日':''}</span>
+      <div style="display:flex;align-items:center;gap:8px">${diffStr}<span style="font-family:monospace;font-size:14px;color:${isToday?'#818cf8':'#ccc'};font-weight:${isToday?700:400}">${val} kg</span></div>
+    </div>`;
+  }).join('');
 }
 
-// Draw chart
-drawWeightChart(keys);
+function drawChart() {
+  const canvas = document.getElementById('w-chart');
+  if (!canvas) return;
+  const W = canvas.offsetWidth || 320, H = 160;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
 
-// Recent list
-const listEl = document.getElementById(‘weight-list’);
-const recent = keys.slice(-7).reverse();
-listEl.innerHTML = recent.map(k => {
-const d = new Date(k + ‘T00:00:00’);
-const label = d.toLocaleDateString(‘ja-JP’, {month:‘numeric’,day:‘numeric’,weekday:‘short’});
-const val = weightData[k];
-const prev = weightData[keys[keys.indexOf(k) - 1]];
-let diffStr = ‘’;
-if (prev) {
-const diff = (val - prev).toFixed(1);
-const sign = diff > 0 ? ‘+’ : ‘’;
-const color = diff > 0 ? ‘#ef4444’ : diff < 0 ? ‘#10b981’ : ‘#555’;
-diffStr = `<span style="font-size:11px;color:${color}">${sign}${diff}</span>`;
-}
-const isToday = k === today;
-return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #0f0f1c"> <span style="font-size:12px;color:${isToday ? '#818cf8' : '#666'}">${label}${isToday ? ' 今日' : ''}</span> <div style="display:flex;align-items:center;gap:8px"> ${diffStr} <span style="font-family:monospace;font-size:14px;color:${isToday ? '#818cf8' : '#ccc'};font-weight:${isToday ? '700' : '400'}">${val} kg</span> </div> </div>`;
-}).join(’’);
-}
+  const days = Array.from({length:14}, (_,i) => {
+    const d = new Date(); d.setDate(d.getDate()-(13-i));
+    return d.toISOString().slice(0,10);
+  });
+  const vals = days.map(d => weightData[d] || null);
+  const valid = vals.filter(v=>v!==null);
+  if (valid.length === 0) {
+    ctx.fillStyle='#333'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('データがありません', W/2, H/2); return;
+  }
 
-function drawWeightChart(keys) {
-const canvas = document.getElementById(‘weight-chart’);
-if (!canvas) return;
-const ctx = canvas.getContext(‘2d’);
-const rect = canvas.getBoundingClientRect();
-canvas.width = rect.width * window.devicePixelRatio || 320;
-canvas.height = 180 * (window.devicePixelRatio || 1);
-ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
-const W = rect.width || 320, H = 180;
+  const minV = Math.min(...valid)-1, maxV = Math.max(...valid)+1;
+  const pad = {t:14,b:22,l:30,r:10};
+  const gW = W-pad.l-pad.r, gH = H-pad.t-pad.b;
+  const xS = i => pad.l + i/13*gW;
+  const yS = v => pad.t + gH - (v-minV)/(maxV-minV)*gH;
 
-// Get last 14 days
-const today = getTodayStr();
-const days = [];
-for (let i = 13; i >= 0; i–) {
-const d = new Date(); d.setDate(d.getDate() - i);
-days.push(d.toISOString().slice(0, 10));
-}
-const vals = days.map(d => weightData[d] || null);
-const validVals = vals.filter(v => v !== null);
-if (validVals.length === 0) {
-ctx.fillStyle = ‘#333’;
-ctx.font = ‘12px sans-serif’;
-ctx.textAlign = ‘center’;
-ctx.fillText(‘データがありません’, W/2, H/2);
-return;
-}
+  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1;
+  [0,1,2,3].forEach(i=>{
+    const y=pad.t+i/3*gH;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+    ctx.fillStyle='#333'; ctx.font='9px monospace'; ctx.textAlign='right';
+    ctx.fillText((maxV-i/3*(maxV-minV)).toFixed(1), pad.l-3, y+3);
+  });
 
-const minV = Math.min(…validVals) - 1;
-const maxV = Math.max(…validVals) + 1;
-const pad = { top: 16, bottom: 24, left: 32, right: 12 };
-const gW = W - pad.left - pad.right;
-const gH = H - pad.top - pad.bottom;
+  days.forEach((d,i)=>{
+    if(i%2===0){
+      const dd=new Date(d+'T00:00:00');
+      ctx.fillStyle='#333'; ctx.font='9px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(`${dd.getMonth()+1}/${dd.getDate()}`, xS(i), H-4);
+    }
+  });
 
-const xScale = i => pad.left + (i / 13) * gW;
-const yScale = v => pad.top + gH - ((v - minV) / (maxV - minV)) * gH;
+  const pts = vals.map((v,i)=>v!==null?{x:xS(i),y:yS(v)}:null).filter(Boolean);
+  if (pts.length < 1) return;
 
-// Grid lines
-ctx.strokeStyle = ‘#1a1a2e’;
-ctx.lineWidth = 1;
-for (let i = 0; i <= 3; i++) {
-const y = pad.top + (i / 3) * gH;
-ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-const val = maxV - (i / 3) * (maxV - minV);
-ctx.fillStyle = ‘#333’; ctx.font = ‘9px monospace’; ctx.textAlign = ‘right’;
-ctx.fillText(val.toFixed(1), pad.left - 4, y + 3);
+  ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.lineTo(pts[pts.length-1].x, H-pad.b);
+  ctx.lineTo(pts[0].x, H-pad.b); ctx.closePath();
+  ctx.fillStyle='rgba(129,140,248,0.12)'; ctx.fill();
+
+  ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle='#818cf8'; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
+
+  const today = todayStr();
+  vals.forEach((v,i)=>{
+    if(!v) return;
+    const isT = days[i]===today;
+    ctx.beginPath(); ctx.arc(xS(i),yS(v),isT?5:3,0,Math.PI*2);
+    ctx.fillStyle='#818cf8'; ctx.fill();
+    if(isT){ctx.beginPath();ctx.arc(xS(i),yS(v),5,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();}
+  });
 }
 
-// X labels (every 2 days)
-ctx.fillStyle = ‘#333’; ctx.font = ‘9px sans-serif’; ctx.textAlign = ‘center’;
-days.forEach((d, i) => {
-if (i % 2 === 0) {
-const dd = new Date(d + ‘T00:00:00’);
-ctx.fillText(`${dd.getMonth()+1}/${dd.getDate()}`, xScale(i), H - 4);
-}
-});
-
-// Fill area
-const firstValid = vals.findIndex(v => v !== null);
-ctx.beginPath();
-let started = false;
-vals.forEach((v, i) => {
-if (v === null) return;
-if (!started) { ctx.moveTo(xScale(i), yScale(v)); started = true; }
-else ctx.lineTo(xScale(i), yScale(v));
-});
-const lastValid = […vals].reverse().findIndex(v => v !== null);
-const lastIdx = vals.length - 1 - lastValid;
-ctx.lineTo(xScale(lastIdx), H - pad.bottom);
-ctx.lineTo(xScale(firstValid), H - pad.bottom);
-ctx.closePath();
-ctx.fillStyle = ‘rgba(129,140,248,0.15)’;
-ctx.fill();
-
-// Line
-ctx.beginPath(); started = false;
-ctx.strokeStyle = ‘#818cf8’; ctx.lineWidth = 2; ctx.lineJoin = ‘round’;
-vals.forEach((v, i) => {
-if (v === null) return;
-if (!started) { ctx.moveTo(xScale(i), yScale(v)); started = true; }
-else ctx.lineTo(xScale(i), yScale(v));
-});
-ctx.stroke();
-
-// Dots
-vals.forEach((v, i) => {
-if (v === null) return;
-const isToday = days[i] === today;
-ctx.beginPath();
-ctx.arc(xScale(i), yScale(v), isToday ? 5 : 3, 0, Math.PI * 2);
-ctx.fillStyle = isToday ? ‘#818cf8’ : ‘#818cf8’;
-ctx.fill();
-if (isToday) {
-ctx.beginPath();
-ctx.arc(xScale(i), yScale(v), 5, 0, Math.PI * 2);
-ctx.strokeStyle = ‘#fff’; ctx.lineWidth = 1.5; ctx.stroke();
-}
-});
+function startApp() {
+  document.getElementById('date-label').textContent =
+    new Date().toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
+  renderAll();
 }
 
-function calcRiceAdvice() {
-// Rice constants: 100g = 168kcal, carbs 37g
-const RICE_CARBS_PER_100G = 37;
-
-// Collect all entries except dinner, track rice separately
-const mealKeys = [‘morning’, ‘lunch’, ‘snack’];
-let totalCarbsExRice = 0; // carbs from non-rice foods
-let riceEaten = 0;        // rice already eaten (g)
-
-mealKeys.forEach(key => {
-(data[key] || []).forEach(e => {
-// Check each food item - if it contains “ご飯” or “米” or “rice”, count as rice
-(e.meals || []).forEach(m => {
-const name = (m.name || ‘’).toLowerCase();
-if (name.includes(‘ご飯’) || name.includes(‘ごはん’) || name.includes(‘白米’) || name.includes(‘米’) || name.includes(‘rice’)) {
-// Parse amount to grams
-const amountStr = m.amount || ‘’;
-const gMatch = amountStr.match(/(\d+)\s*g/);
-const bowlMatch = amountStr.match(/(\d+)\s*(杯|膳)/);
-if (gMatch) {
-riceEaten += parseInt(gMatch[1]);
-} else if (bowlMatch) {
-riceEaten += parseInt(bowlMatch[1]) * 150;
-} else {
-// Estimate from carbs
-riceEaten += Math.round((m.carbs / RICE_CARBS_PER_100G) * 100);
-}
-} else {
-totalCarbsExRice += m.carbs || 0;
-}
-});
-});
-});
-
-const sofar = mealKeys.reduce((acc, key) => {
-(data[key] || []).forEach(e => {
-acc.calories += e.total?.calories || 0;
-});
-return acc;
-}, {calories:0});
-
-const hasData = sofar.calories > 0;
-const hasDinner = (data[‘dinner’] || []).length > 0;
-const adviceEl = document.getElementById(‘rice-advice’);
-const contentEl = document.getElementById(‘rice-advice-content’);
-
-if (!hasData) { adviceEl.style.display = ‘none’; return; }
-adviceEl.style.display = ‘block’;
-
-if (hasDinner) {
-const dinnerCal = (data[‘dinner’] || []).reduce((s,e) => s + (e.total?.calories||0), 0);
-const allCal = Object.values(data).flat().reduce((s,e) => s + (e.total?.calories||0), 0);
-const diff = allCal - GOAL.calories;
-let msg = ‘’;
-if (diff > 100) {
-msg = `今日は <span style="color:#ef4444;font-weight:700">+${diff} kcal 超過</span>。明日は少し控えめにしましょう。`;
-} else if (diff < -200) {
-msg = `まだ <span style="color:#10b981;font-weight:700">${Math.abs(diff)} kcal</span> 余裕あり。軽いものを足してもOKです。`;
-} else {
-msg = `<span style="color:#10b981;font-weight:700">今日はほぼ目標通り！</span> よく頑張りました👍`;
-}
-contentEl.innerHTML = msg;
-return;
-}
-
-// ご飯目標から計算
-const riceGoal = GOAL.rice || 600;
-// ご飯以外の糖質をご飯換算してご飯目標から引く
-const carbsAsRice = Math.round((totalCarbsExRice / RICE_CARBS_PER_100G) * 100);
-const riceRemaining = Math.max(0, riceGoal - riceEaten - carbsAsRice);
-const remCal = GOAL.calories - sofar.calories;
-
-const bowl = riceRemaining >= 250 ? ‘大盛り’ : riceRemaining >= 180 ? ‘普通盛り’ : riceRemaining >= 120 ? ‘小盛り’ : riceRemaining >= 60 ? ‘少量’ : ‘なし’;
-const riceKcal = Math.round(riceRemaining * 1.68);
-const remCalAfterRice = remCal - riceKcal;
-
-let msg = ‘’;
-if (riceRemaining <= 0) {
-msg = `今日の糖質はすでにご飯目標分に達しています。<br>夕食は <span style="color:#f59e0b;font-weight:700">ご飯なし</span> でおかず中心にしましょう。残り ${remCal} kcal。`;
-} else {
-msg = `ご飯目標 <span style="color:#555">${riceGoal}g</span> のうち既食 ${riceEaten}g・他食材の糖質換算 ${carbsAsRice}g<br> 🍚 夕食のご飯 <span style="color:#10b981;font-weight:700;font-size:18px">${riceRemaining}g（${bowl}）</span><br> <span style="font-size:12px;color:#555">ご飯で ${riceKcal} kcal・おかずで残り ${remCalAfterRice} kcal</span>`;
-}
-contentEl.innerHTML = msg;
-}
-
-// Start
-loadGoals();
+// Init
+loadState();
 if (apiKey) {
-apiScreen.style.display = ‘none’;
-appDiv.style.display = ‘block’;
-init();
+  document.getElementById('api-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  startApp();
 }
 </script>
-
 </body>
 </html>
