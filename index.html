@@ -128,8 +128,6 @@ input{outline:none}
     <input id="goal-cal-input" class="modal-input" type="number" placeholder="1800">
     <label class="modal-label">1日のご飯目標 (g)</label>
     <input id="goal-rice-input" class="modal-input" type="number" placeholder="600">
-    <label class="modal-label">目標体重 (kg)</label>
-    <input id="goal-weight-input" class="modal-input" type="number" step="0.1" placeholder="例: 55.0">
     <label class="modal-label">体重タブのパスワード（任意）</label>
     <input id="goal-pw-input" class="modal-input" type="password" placeholder="空白でパスワードなし">
     <div class="modal-btns">
@@ -230,6 +228,15 @@ input{outline:none}
       <input id="w-input" class="w-input" type="number" step="0.1" placeholder="00.0">
       <button class="w-save-btn" onclick="saveWeight()">記録する</button>
       <div class="w-compare" id="w-compare"></div>
+    </div>
+    <div class="w-card">
+      <div class="w-card-title">目標体重</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="goal-weight-input" type="number" step="0.1" placeholder="例: 55.0"
+          style="flex:1;background:#06060e;border:1px solid #1a1a2e;border-radius:10px;padding:10px;color:#e0e0e0;font-size:20px;font-family:monospace;text-align:center;outline:none">
+        <span style="color:#555;font-size:14px">kg</span>
+        <button onclick="saveGoalWeight()" style="background:#10b981;border:none;border-radius:10px;padding:10px 16px;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">保存</button>
+      </div>
     </div>
     <div class="w-card">
       <div class="w-card-title">体重推移（14日）</div>
@@ -429,8 +436,12 @@ function openGoalModal() {
   document.getElementById('goal-cal-input').value = goalCal;
   document.getElementById('goal-rice-input').value = goalRice;
   document.getElementById('goal-pw-input').value = weightPw;
-  document.getElementById('goal-weight-input').value = goalWeight || '';
   document.getElementById('goal-modal').style.display = 'flex';
+}
+function saveGoalWeight() {
+  const gw = parseFloat(document.getElementById('goal-weight-input').value);
+  if (gw > 0) { goalWeight = gw; save('c_goalweight', gw); }
+  drawChart();
 }
 function saveGoalModal() {
   const c = parseInt(document.getElementById('goal-cal-input').value);
@@ -815,6 +826,8 @@ function saveWeight() {
 function renderWeightSection() {
   const today = todayStr();
   if (weightData[today]) document.getElementById('w-input').value = weightData[today];
+  const gwEl = document.getElementById('goal-weight-input');
+  if (gwEl) gwEl.value = goalWeight || '';
   const cmp = document.getElementById('w-compare');
   const yest = new Date(); yest.setDate(yest.getDate()-1);
   const yKey = yest.toISOString().slice(0,10);
