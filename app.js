@@ -25,6 +25,9 @@ let weightData = {};
 let favorites = [];
 let openSecs = {morning:true, lunch:true, snack:true, dinner:true};
 let aeteMealKey = 'lunch';
+let habits = []; // [{id, name}]
+let habitChecks = {}; // {date: {id: bool}}
+let currentDate = new Date().toISOString().slice(0,10);
 
 //
 function load() {
@@ -35,7 +38,40 @@ function load() {
     weightPw    = localStorage.getItem('c_weightpw') || '';
     weightData  = JSON.parse(localStorage.getItem('c_weight') || '{}');
     favorites   = JSON.parse(localStorage.getItem('c_favs') || '[]');
+    habits      = JSON.parse(localStorage.getItem('c_habits') || '[]');
+    habitChecks = JSON.parse(localStorage.getItem('c_habit_checks') || '{}');
   } catch(e) {}
+}
+function loadMealData() {
+  try {
+    const saved = localStorage.getItem('c_meals_' + currentDate);
+    mealData = saved ? JSON.parse(saved) : {morning:[], lunch:[], snack:[], dinner:[]};
+  } catch(e) {
+    mealData = {morning:[], lunch:[], snack:[], dinner:[]};
+  }
+}
+function saveMealData() {
+  save('c_meals_' + currentDate, mealData);
+}
+function changeDate(delta) {
+  const d = new Date(currentDate + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  const newDate = d.toISOString().slice(0,10);
+  const today = new Date().toISOString().slice(0,10);
+  if (newDate > today) return; // can't go to future
+  currentDate = newDate;
+  loadMealData();
+  updateDateLabel();
+  renderAll();
+}
+function updateDateLabel() {
+  const today = new Date().toISOString().slice(0,10);
+  const d = new Date(currentDate + 'T00:00:00');
+  const label = d.toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
+  const isToday = currentDate === today;
+  document.getElementById('date-lbl').textContent = isToday ? label : label + ' (過去)';
+  document.getElementById('date-next').style.opacity = isToday ? '0.2' : '1';
+  document.getElementById('date-next').style.pointerEvents = isToday ? 'none' : 'auto';
 }
 function save(key, val) { try { localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val)); } catch(e) {} }
 
@@ -103,21 +139,38 @@ function showTab(tab) {
       return;
     }
     doShowWeight();
-  } else {
-    weightUnlocked = false;
-    document.getElementById('sections').style.display = 'block';
-    document.getElementById('w-section').style.display = 'none';
-    document.getElementById('rice-box').style.display = '';
-    document.getElementById('tab-food').className = 'tab-btn active';
-    document.getElementById('tab-weight').className = 'tab-btn';
+    return;
   }
+  if (tab === 'habit') {
+    weightUnlocked = false;
+    document.getElementById('sections').style.display = 'none';
+    document.getElementById('w-section').style.display = 'none';
+    document.getElementById('h-section').style.display = 'block';
+    document.getElementById('rice-box').style.display = 'none';
+    document.getElementById('tab-food').className = 'tab-btn';
+    document.getElementById('tab-weight').className = 'tab-btn';
+    document.getElementById('tab-habit').className = 'tab-btn active';
+    renderHabits();
+    return;
+  }
+  // food tab
+  weightUnlocked = false;
+  document.getElementById('sections').style.display = 'block';
+  document.getElementById('w-section').style.display = 'none';
+  document.getElementById('h-section').style.display = 'none';
+  document.getElementById('rice-box').style.display = '';
+  document.getElementById('tab-food').className = 'tab-btn active';
+  document.getElementById('tab-weight').className = 'tab-btn';
+  document.getElementById('tab-habit').className = 'tab-btn';
 }
 function doShowWeight() {
   document.getElementById('sections').style.display = 'none';
   document.getElementById('w-section').style.display = 'block';
+  document.getElementById('h-section').style.display = 'none';
   document.getElementById('rice-box').style.display = 'none';
   document.getElementById('tab-food').className = 'tab-btn';
   document.getElementById('tab-weight').className = 'tab-btn active';
+  document.getElementById('tab-habit').className = 'tab-btn';
   renderWeightSection();
 }
 
@@ -310,7 +363,7 @@ function toggleEntry(key, i) {
   const el = document.getElementById(`det-${key}-${i}`);
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
-function deleteEntry(key, i) { mealData[key].splice(i, 1); renderAll(); }
+function deleteEntry(key, i) { mealData[key].splice(i, 1); saveMealData(); renderAll(); }
 
 function toggleFav(key, i) {
   const entry = mealData[key][i];
@@ -325,6 +378,7 @@ function applyFav(key, fi) {
   const f = favorites[fi];
   if (!f) return;
   mealData[key].push({...f, id: Date.now()});
+  saveMealData();
   renderAll();
 }
 function deleteFav(fi) { favorites.splice(fi, 1); save('c_favs', favorites); renderAll(); }
@@ -336,6 +390,7 @@ function addQuick(key, name, cal, fat, carbs, protein) {
     total: {calories:cal, fat, carbs, protein},
     advice: '', score: 7, id: Date.now()
   });
+  saveMealData();
   renderAll();
 }
 
@@ -358,6 +413,7 @@ async function analyze(mealKey) {
     const parsed = await res.json();
     if (!res.ok) throw new Error(parsed.error || 'HTTP ' + res.status);
     mealData[mealKey].push({input:text, ...parsed, id:Date.now()});
+    saveMealData();
     ta.value = '';
     renderAll();
   } catch(e) {
@@ -405,6 +461,7 @@ function applyAete(id) {
     advice: `糖質${item.sugar||item.carbs}g・タンパク質${item.protein}gで栄養バランスの良いお弁当です。`,
     score: 8, id: Date.now()
   });
+  saveMealData();
   renderAll();
   closeModal('aete-modal');
 }
@@ -477,9 +534,70 @@ function drawChart() {
 }
 
 //
+// Habit functions
+function addHabit() {
+  const input = document.getElementById('habit-input');
+  const name = input.value.trim();
+  if (!name) return;
+  habits.push({id: Date.now(), name});
+  save('c_habits', habits);
+  input.value = '';
+  renderHabits();
+}
+
+function deleteHabit(id) {
+  habits = habits.filter(h => h.id !== id);
+  save('c_habits', habits);
+  renderHabits();
+}
+
+function toggleHabit(id) {
+  if (!habitChecks[currentDate]) habitChecks[currentDate] = {};
+  habitChecks[currentDate][id] = !habitChecks[currentDate][id];
+  save('c_habit_checks', habitChecks);
+  renderHabits();
+}
+
+function renderHabits() {
+  const list = document.getElementById('habit-list');
+  if (!list) return;
+  const checks = habitChecks[currentDate] || {};
+  const doneCount = habits.filter(h => checks[h.id]).length;
+  const total = habits.length;
+
+  if (habits.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#333;font-size:13px;padding:30px">習慣を追加してください</div>';
+    return;
+  }
+
+  // Progress bar
+  const pct = total > 0 ? Math.round(doneCount/total*100) : 0;
+  list.innerHTML = `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#555;margin-bottom:6px">
+        <span>今日の達成</span>
+        <span style="color:${pct===100?'#10b981':'#818cf8'}">${doneCount}/${total} (${pct}%)</span>
+      </div>
+      <div style="height:6px;background:#1a1a2e;border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${pct===100?'#10b981':'#818cf8'};border-radius:99px;transition:width .5s"></div>
+      </div>
+    </div>
+    ${habits.map(h => {
+      const done = !!checks[h.id];
+      return `<div class="habit-item">
+        <button class="habit-check ${done?'done':''}" onclick="toggleHabit(${h.id})">
+          ${done ? '✓' : ''}
+        </button>
+        <span class="habit-name ${done?'done':''}">${h.name}</span>
+        <button class="habit-del" onclick="deleteHabit(${h.id})">✕</button>
+      </div>`;
+    }).join('')}
+  `;
+}
+
 function startApp() {
-  document.getElementById('date-lbl').textContent =
-    new Date().toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
+  loadMealData();
+  updateDateLabel();
   renderAll();
 }
 
