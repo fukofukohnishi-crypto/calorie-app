@@ -1,10 +1,10 @@
 <!DOCTYPE html>
+
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>カロリートラッカー</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -12,117 +12,82 @@ body{background:#07070f;color:#e0e0e0;font-family:'Helvetica Neue','Hiragino San
 input,textarea,button{font-family:inherit}
 textarea{resize:none;outline:none}
 input{outline:none}
-
-/* API Key Screen */
-#api-screen{position:fixed;inset:0;background:#07070f;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;z-index:100}
-#api-screen h2{font-size:20px;font-weight:700;color:#e0e0e0;margin:12px 0 8px;text-align:center}
-#api-screen p{font-size:13px;color:#555;text-align:center;line-height:1.6;margin-bottom:24px}
-.api-textarea{width:100%;background:#0f0f1a;border:1px solid #1a1a2e;border-radius:12px;padding:12px 16px;color:#ccc;font-size:13px;font-family:monospace;line-height:1.5}
-#api-save-btn{margin-top:16px;width:100%;background:#f59e0b;border:none;border-radius:12px;padding:14px;color:#000;font-size:15px;font-weight:700;cursor:pointer}
-.api-note{font-size:11px;color:#333;margin-top:12px;text-align:center}
-
-/* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:50;display:flex;align-items:center;justify-content:center;padding:24px}
 .modal{background:#0f0f1a;border:1px solid #1a1a2e;border-radius:16px;padding:24px;width:100%;max-width:400px}
-.modal h3{font-size:16px;font-weight:700;color:#e0e0e0;margin-bottom:16px}
-.modal-input{width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:10px;padding:10px 14px;color:#e0e0e0;font-size:20px;font-family:monospace;text-align:center}
+.modal h3{font-size:16px;font-weight:700;color:#e0e0e0;margin-bottom:14px}
 .modal-label{font-size:11px;color:#888;margin-bottom:6px;margin-top:12px;display:block}
+.modal-input{width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:10px;padding:10px 14px;color:#e0e0e0;font-size:18px;font-family:monospace;text-align:center}
 .modal-btns{display:flex;gap:10px;margin-top:16px}
-.modal-cancel{flex:1;background:#1a1a2e;border:none;border-radius:10px;padding:12px;color:#666;cursor:pointer}
-.modal-save{flex:1;background:#f59e0b;border:none;border-radius:10px;padding:12px;color:#000;font-weight:700;cursor:pointer}
-
-/* Header */
+.modal-cancel{flex:1;background:#1a1a2e;border:none;border-radius:10px;padding:12px;color:#666;cursor:pointer;font-family:inherit}
+.modal-save{flex:1;background:#f59e0b;border:none;border-radius:10px;padding:12px;color:#000;font-weight:700;cursor:pointer;font-family:inherit}
 .header{padding:24px 20px 20px;border-bottom:1px solid #0f0f1c;background:linear-gradient(180deg,#0d0d1a,#07070f)}
-.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-.date-label{font-size:10px;color:#333;letter-spacing:3px;text-transform:uppercase}
-.header-btns{display:flex;gap:6px}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.date-lbl{font-size:10px;color:#333;letter-spacing:2px;text-transform:uppercase}
+.hbtns{display:flex;gap:6px}
 .hbtn{background:none;border:1px solid #1a1a2e;border-radius:8px;padding:5px 10px;color:#555;font-size:11px;cursor:pointer}
-
-/* Gauge */
 .gauge-wrap{position:relative;width:176px;height:176px;margin:0 auto}
 .gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.gauge-cal{font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.gauge-rem{font-size:12px;font-weight:600;margin-top:8px}
-
-/* Macros */
+.gauge-cal{font-size:38px;font-weight:700;line-height:1}
+.gauge-rem{font-size:12px;font-weight:600;margin-top:6px}
+.gauge-sub{font-size:9px;color:#333;margin-top:3px;text-align:center;line-height:1.5}
 .macros{margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 14px}
-.macro-row{display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;color:#555}
+.macro-lbl{display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;color:#555}
 .pill{height:5px;background:#1a1a2e;border-radius:99px;overflow:hidden}
-.pill-fill{height:100%;border-radius:99px;transition:width .5s ease}
-
-/* Segment bar */
+.pill-fill{height:100%;border-radius:99px;transition:width .5s}
 .seg-bar{height:7px;background:#1a1a2e;border-radius:99px;display:flex;overflow:hidden;margin-top:14px}
 .seg-legend{display:flex;justify-content:center;gap:12px;margin-top:8px;flex-wrap:wrap}
 .seg-item{display:flex;align-items:center;gap:4px;font-size:11px;color:#555}
 .seg-dot{width:6px;height:6px;border-radius:99px;flex-shrink:0}
-
-/* Rice advice */
-.rice-box{margin:12px 14px 0;background:linear-gradient(135deg,#0a1a0a,#071207);border:1px solid #10b98128;border-radius:14px;padding:14px;display:none}
-.rice-title{font-size:10px;color:#10b981;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.rice-box{margin:10px 14px 0;background:linear-gradient(135deg,#0a1a0a,#071207);border:1px solid #10b98128;border-radius:14px;padding:14px;display:none}
+.rice-title{font-size:10px;color:#10b981;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
 .rice-content{font-size:13px;color:#ccc;line-height:1.8}
-
-/* Tabs */
 .tabs{display:flex;gap:8px;padding:12px 14px 0}
-.tab-btn{flex:1;border:1px solid #151520;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.tab-btn{flex:1;border:1px solid #151520;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
 .tab-btn.active{background:#818cf8;color:#000;border-color:#818cf8}
 .tab-btn:not(.active){background:#09090f;color:#555}
-
-/* Meal sections */
 .sections{padding:10px 14px 0}
-.meal-sec{background:#09090f;border:1px solid #151520;border-radius:16px;overflow:hidden;margin-bottom:10px;transition:border-color .3s}
-.meal-header{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
-.meal-emoji{font-size:18px;line-height:1}
+.meal-sec{background:#09090f;border:1px solid #151520;border-radius:16px;overflow:hidden;margin-bottom:10px}
+.meal-hdr{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
 .meal-info{flex:1}
 .meal-title-row{display:flex;align-items:center;gap:8px}
 .meal-name{font-size:14px;font-weight:600;color:#ccc}
 .meal-kcal{font-size:13px}
-.meal-count{font-size:10px;color:#444;background:#151520;border-radius:99px;padding:1px 7px}
+.meal-cnt{font-size:10px;color:#444;background:#151520;border-radius:99px;padding:1px 7px}
 .meal-mini{height:3px;background:#151520;border-radius:99px;margin-top:6px;overflow:hidden}
-.meal-mini-fill{height:100%;border-radius:99px;transition:width .5s ease}
-.meal-arrow{color:#333;font-size:11px}
+.meal-mini-fill{height:100%;border-radius:99px;transition:width .5s}
 .meal-body{border-top:1px solid #151520;padding:12px 14px}
-
-/* Entry cards */
+.quick-btns{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.quick-btn{background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer;font-family:inherit}
 .entry{background:#0c0c1a;border:1px solid #1a1a2e;border-radius:10px;margin-bottom:6px;overflow:hidden}
-.entry-head{padding:10px 13px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.entry-hdr{padding:10px 13px;cursor:pointer;display:flex;align-items:center;gap:8px}
 .entry-text{flex:1;min-width:0}
 .entry-name{font-size:13px;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.entry-nums{display:flex;gap:10px;margin-top:2px;font-size:11px;color:#555}
+.entry-nums{display:flex;gap:8px;margin-top:2px;font-size:11px;color:#555}
 .entry-kcal{color:#f59e0b}
 .entry-del{background:none;border:none;color:#2a2a3e;cursor:pointer;font-size:14px;padding:2px 6px}
+.fav-star{background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px}
 .entry-detail{border-top:1px solid #1a1a2e;padding:11px 13px;display:none}
 .entry-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #0f0f1c;color:#888}
 .entry-row span:last-child{color:#f59e0b}
-.advice-box{margin-top:10px;padding:9px 11px;background:#080814;border-radius:8px;font-size:12px;color:#888;line-height:1.7}
-
-/* Input box */
+.advice-box{margin-top:8px;padding:9px 11px;background:#080814;border-radius:8px;font-size:12px;color:#888;line-height:1.7}
 .input-box{background:#06060e;border:1px solid #151520;border-radius:11px;padding:10px 12px;margin-top:6px}
-.input-box textarea{width:100%;background:none;border:none;color:#ccc;font-size:13px;line-height:1.6}
 .input-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
 .input-hint{font-size:10px;color:#2a2a3e}
-.analyze-btn{border:none;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px}
+.input-btns{display:flex;gap:6px}
+.analyze-btn{border:none;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit}
+.aete-btn{background:#09090f;border:1px solid #818cf840;border-radius:9px;padding:8px 10px;color:#818cf8;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
 .err-msg{font-size:11px;color:#f87171;background:#1c0a0a;border-radius:7px;padding:6px 10px;margin-top:6px;line-height:1.5;display:none}
-
-/* Weight section */
-.weight-section{padding:10px 14px 0;display:none}
+.fav-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.fav-chip{background:#0f0f1a;border:1px solid #1a1a2e;border-radius:20px;padding:5px 12px;font-size:12px;color:#aaa;cursor:pointer;display:flex;align-items:center;gap:6px}
+.fav-chip-kcal{font-size:10px;color:#555}
+.fav-chip-del{color:#333;font-size:11px;cursor:pointer;margin-left:2px}
+.w-section{padding:10px 14px 0;display:none}
 .w-card{background:#09090f;border:1px solid #151520;border-radius:16px;padding:16px;margin-bottom:12px}
 .w-card-title{font-size:10px;color:#555;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
-.w-input-row{display:flex;gap:10px;align-items:center}
-.w-input{flex:1;background:#06060e;border:1px solid #1a1a2e;border-radius:10px;padding:12px;color:#e0e0e0;font-size:24px;font-family:monospace;text-align:center}
-.w-unit{color:#555;font-size:14px}
-.w-save-btn{background:#818cf8;border:none;border-radius:10px;padding:12px 16px;color:#000;font-size:13px;font-weight:700;cursor:pointer}
-.w-compare{margin-top:10px;text-align:center;font-size:14px;min-height:20px}
+.w-input{width:100%;background:#06060e;border:1px solid #1a1a2e;border-radius:10px;padding:12px;color:#e0e0e0;font-size:24px;font-family:monospace;text-align:center;margin-bottom:10px}
+.w-save-btn{width:100%;background:#818cf8;border:none;border-radius:10px;padding:12px;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.w-compare{margin-top:10px;text-align:center;font-size:14px;min-height:18px}
 .w-list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #0f0f1c;font-size:12px}
-
-/* Favorites */
-.fav-btn{background:none;border:none;cursor:pointer;font-size:16px;padding:2px 4px;opacity:0.4;transition:opacity .2s}
-.fav-btn.saved{opacity:1}
-.fav-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.fav-chip{background:#0f0f1a;border:1px solid #1a1a2e;border-radius:20px;padding:5px 12px;font-size:12px;color:#aaa;cursor:pointer;display:flex;align-items:center;gap:6px;transition:border-color .2s}
-.fav-chip:active{border-color:#f59e0b}
-.fav-chip-del{color:#333;font-size:11px;margin-left:2px}
-
-/* Spinner */
 .spinner{display:inline-block;width:11px;height:11px;border:2px solid #333;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
@@ -130,28 +95,29 @@ input{outline:none}
 <body>
 
 <!-- API Key Screen -->
-<div id="api-screen">
+
+<div id="api-screen" style="position:fixed;inset:0;background:#07070f;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;z-index:100">
   <div style="font-size:40px">🔑</div>
-  <h2>APIキーを設定</h2>
-  <p>platform.claude.com で発行した<br>APIキーを貼り付けてください</p>
-  <textarea id="api-input" class="api-textarea" rows="3" placeholder="sk-ant-api..."></textarea>
-  <button id="api-save-btn" onclick="saveApiKey()">保存して開始</button>
-  <p class="api-note">キーはこの端末のみに保存されます</p>
+  <h2 style="font-size:20px;font-weight:700;color:#e0e0e0;margin:12px 0 8px;text-align:center">APIキーを設定</h2>
+  <p style="font-size:13px;color:#555;text-align:center;line-height:1.6;margin-bottom:20px">platform.claude.com で発行した<br>APIキーを貼り付けてください</p>
+  <textarea id="api-input" rows="3" style="width:100%;background:#0f0f1a;border:1px solid #1a1a2e;border-radius:12px;padding:12px 16px;color:#ccc;font-size:13px;font-family:monospace;line-height:1.5;outline:none" placeholder="sk-ant-api..."></textarea>
+  <button onclick="saveApiKey()" style="margin-top:14px;width:100%;background:#f59e0b;border:none;border-radius:12px;padding:14px;color:#000;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">保存して開始</button>
+  <p style="font-size:11px;color:#333;margin-top:12px">キーはこの端末のみに保存されます</p>
 </div>
 
-<!-- Key Modal -->
+<!-- Modals -->
+
 <div id="key-modal" class="modal-bg" style="display:none">
   <div class="modal">
     <h3>APIキーを変更</h3>
-    <textarea id="key-modal-input" class="api-textarea" rows="3"></textarea>
+    <textarea id="key-modal-input" rows="3" style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:10px;padding:10px 14px;color:#ccc;font-size:12px;font-family:monospace;outline:none;resize:none"></textarea>
     <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeKeyModal()">キャンセル</button>
+      <button class="modal-cancel" onclick="closeModal('key-modal')">キャンセル</button>
       <button class="modal-save" onclick="saveKeyModal()">保存</button>
     </div>
   </div>
 </div>
 
-<!-- Goal Modal -->
 <div id="goal-modal" class="modal-bg" style="display:none">
   <div class="modal">
     <h3>🎯 目標設定</h3>
@@ -159,48 +125,49 @@ input{outline:none}
     <input id="goal-cal-input" class="modal-input" type="number" placeholder="1800">
     <label class="modal-label">1日のご飯目標 (g)</label>
     <input id="goal-rice-input" class="modal-input" type="number" placeholder="600">
-    <div style="font-size:10px;color:#333;margin-top:6px;text-align:center">ご飯以外の糖質は自動でご飯換算して引き算します</div>
+    <label class="modal-label">体重タブのパスワード（任意）</label>
+    <input id="goal-pw-input" class="modal-input" type="password" placeholder="空白でパスワードなし">
     <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeGoalModal()">キャンセル</button>
+      <button class="modal-cancel" onclick="closeModal('goal-modal')">キャンセル</button>
       <button class="modal-save" onclick="saveGoalModal()">保存</button>
     </div>
   </div>
 </div>
 
-<!-- App -->
-<div id="aete-modal" class="modal-bg" style="display:none">
-  <div class="modal" style="max-height:80vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
-    <div style="padding:16px 16px 0">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h3 style="font-size:16px;font-weight:700;color:#e0e0e0">🍱 あえて、を選ぶ</h3>
-        <button onclick="closeAeteModal()" style="background:none;border:none;color:#555;font-size:20px;cursor:pointer">✕</button>
-      </div>
-      <input id="aete-search" type="text" placeholder="メニューを検索…" oninput="aeteSearch=this.value;renderAeteList()"
-        style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:9px 12px;color:#e0e0e0;font-size:13px;outline:none;margin-bottom:8px">
-      <input id="aete-meal-key" type="hidden" value="lunch">
-    </div>
-    <div id="aete-list" style="overflow-y:auto;flex:1;background:#09090f"></div>
-  </div>
-</div>
 <div id="pw-modal" class="modal-bg" style="display:none">
   <div class="modal">
     <h3>🔒 体重データ</h3>
     <p style="font-size:12px;color:#666;margin-bottom:14px">パスワードを入力してください</p>
-    <input id="pw-input" type="password" placeholder="パスワード"
-      style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:12px;color:#e0e0e0;font-size:16px;outline:none;text-align:center;letter-spacing:4px"
-      onkeydown="if(event.key==='Enter')checkPw()">
+    <input id="pw-input" type="password" class="modal-input" placeholder="••••" onkeydown="if(event.key==='Enter')checkPw()">
     <div id="pw-error" style="font-size:11px;color:#ef4444;text-align:center;margin-top:8px;display:none">パスワードが違います</div>
     <div class="modal-btns">
-      <button class="modal-cancel" onclick="closePwModal()">キャンセル</button>
+      <button class="modal-cancel" onclick="closeModal('pw-modal')">キャンセル</button>
       <button class="modal-save" onclick="checkPw()">確認</button>
     </div>
   </div>
 </div>
+
+<div id="aete-modal" class="modal-bg" style="display:none">
+  <div class="modal" style="max-height:80vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+    <div style="padding:16px 16px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="font-size:16px;font-weight:700;color:#e0e0e0">🍱 あえて、を選ぶ</h3>
+        <button onclick="closeModal('aete-modal')" style="background:none;border:none;color:#555;font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <input id="aete-search" type="text" placeholder="メニューを検索…" oninput="renderAeteList()"
+        style="width:100%;background:#07070f;border:1px solid #1a1a2e;border-radius:8px;padding:9px 12px;color:#e0e0e0;font-size:13px;outline:none;margin-bottom:8px">
+    </div>
+    <div id="aete-list" style="overflow-y:auto;flex:1;background:#09090f"></div>
+  </div>
+</div>
+
+<!-- App -->
+
 <div id="app" style="display:none">
   <div class="header">
     <div class="top-bar">
-      <div class="date-label" id="date-label"></div>
-      <div class="header-btns">
+      <div class="date-lbl" id="date-lbl"></div>
+      <div class="hbtns">
         <button class="hbtn" onclick="openGoalModal()">🎯 目標</button>
         <button class="hbtn" onclick="openKeyModal()">⚙️ APIキー</button>
       </div>
@@ -210,25 +177,25 @@ input{outline:none}
         <circle cx="88" cy="88" r="76" fill="none" stroke="#1a1a2e" stroke-width="10"/>
         <circle id="gauge-arc" cx="88" cy="88" r="76" fill="none" stroke="#22d3ee" stroke-width="10"
           stroke-linecap="round" stroke-dasharray="477.5" stroke-dashoffset="477.5"
-          transform="rotate(-90 88 88)" style="transition:stroke-dashoffset .8s ease,stroke .5s"/>
+          transform="rotate(-90 88 88)" style="transition:stroke-dashoffset .8s,stroke .5s"/>
       </svg>
       <div class="gauge-center">
         <div class="gauge-cal" id="gauge-cal" style="color:#22d3ee">0</div>
         <div class="gauge-rem" id="gauge-rem" style="color:#666">残り 1800 kcal</div>
-        <div id="gauge-goals" style="margin-top:4px;font-size:9px;color:#333;text-align:center;line-height:1.4">目標 1800 kcal<br>ご飯 600g/日</div>
+        <div class="gauge-sub" id="gauge-sub">目標 1800 kcal<br>ご飯 600g/日</div>
       </div>
     </div>
     <div class="macros">
       <div>
-        <div class="macro-row"><span>脂質</span><span id="fat-val">0g</span></div>
+        <div class="macro-lbl"><span>脂質</span><span id="fat-val">0g</span></div>
         <div class="pill"><div class="pill-fill" id="fat-bar" style="width:0%;background:#ec4899"></div></div>
       </div>
       <div>
-        <div class="macro-row"><span>糖質</span><span id="carbs-val">0g</span></div>
+        <div class="macro-lbl"><span>糖質</span><span id="carbs-val">0g</span></div>
         <div class="pill"><div class="pill-fill" id="carbs-bar" style="width:0%;background:#818cf8"></div></div>
       </div>
       <div>
-        <div class="macro-row"><span>タンパク質</span><span id="protein-val">0g</span></div>
+        <div class="macro-lbl"><span>タンパク質</span><span id="protein-val">0g</span></div>
         <div class="pill"><div class="pill-fill" id="protein-bar" style="width:0%;background:#22d3ee"></div></div>
       </div>
     </div>
@@ -248,14 +215,11 @@ input{outline:none}
 
   <div class="sections" id="sections"></div>
 
-  <div class="weight-section" id="weight-section">
+  <div class="w-section" id="w-section">
     <div class="w-card">
       <div class="w-card-title">今日の体重</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <input id="w-input" class="w-input" type="number" step="0.1" placeholder="00.0">
-        <span class="w-unit">kg</span>
-      </div>
-      <button class="w-save-btn" onclick="saveWeight()" style="width:100%">記録する</button>
+      <input id="w-input" class="w-input" type="number" step="0.1" placeholder="00.0">
+      <button class="w-save-btn" onclick="saveWeight()">記録する</button>
       <div class="w-compare" id="w-compare"></div>
     </div>
     <div class="w-card">
@@ -267,47 +231,55 @@ input{outline:none}
 </div>
 
 <script>
+// ── State ──────────────────────────────────────────────────────────────────
 const MEALS = [
-  {key:'morning', label:'朝食',   emoji:'🌅', color:'#f59e0b'},
-  {key:'lunch',   label:'昼食',   emoji:'☀️',  color:'#10b981'},
+  {key:'morning', label:'朝食', emoji:'🌅', color:'#f59e0b'},
+  {key:'lunch',   label:'昼食', emoji:'☀️',  color:'#10b981'},
   {key:'snack',   label:'おやつ', emoji:'🍪', color:'#ec4899'},
-  {key:'dinner',  label:'夕食',   emoji:'🌙', color:'#818cf8'},
+  {key:'dinner',  label:'夕食', emoji:'🌙', color:'#818cf8'},
 ];
-const RICE_CARBS = 37; // per 100g
+const QUICK_MORNING = [
+  {name:'ご飯140g', cal:235, fat:0, carbs:52, protein:4},
+  {name:'卵焼き', cal:80, fat:5, carbs:2, protein:6},
+  {name:'納豆', cal:100, fat:5, carbs:6, protein:8},
+  {name:'味噌汁', cal:40, fat:1, carbs:5, protein:2},
+  {name:'レタスサラダ', cal:20, fat:0, carbs:3, protein:1},
+  {name:'りんご', cal:80, fat:0, carbs:20, protein:0},
+  {name:'みかん', cal:45, fat:0, carbs:11, protein:1},
+];
 
-// State
 let apiKey = '';
 let goalCal = 1800;
 let goalRice = 600;
-let mealData = {morning:[], lunch:[], snack:[], dinner:[]};
-let weightData = {};
 let weightPw = '';
 let weightUnlocked = false;
+let mealData = {morning:[], lunch:[], snack:[], dinner:[]};
+let weightData = {};
+let favorites = [];
 let openSecs = {morning:true, lunch:true, snack:true, dinner:true};
+let aeteMealKey = 'lunch';
 
-// Load from localStorage safely
-function loadState() {
+// ── Storage ────────────────────────────────────────────────────────────────
+function load() {
   try {
-    apiKey = localStorage.getItem('c_apikey') || '';
-    goalCal = parseInt(localStorage.getItem('c_goalcal')) || 1800;
-    goalRice = parseInt(localStorage.getItem('c_goalrice')) || 600;
-    weightData = JSON.parse(localStorage.getItem('c_weight') || '{}');
-    weightPw = localStorage.getItem('c_weightpw') || '';
+    apiKey      = localStorage.getItem('c_apikey') || '';
+    goalCal     = parseInt(localStorage.getItem('c_goalcal')) || 1800;
+    goalRice    = parseInt(localStorage.getItem('c_goalrice')) || 600;
+    weightPw    = localStorage.getItem('c_weightpw') || '';
+    weightData  = JSON.parse(localStorage.getItem('c_weight') || '{}');
+    favorites   = JSON.parse(localStorage.getItem('c_favs') || '[]');
   } catch(e) {}
 }
+function save(key, val) { try { localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val)); } catch(e) {} }
 
-function saveGoals() {
-  try {
-    localStorage.setItem('c_goalcal', goalCal);
-    localStorage.setItem('c_goalrice', goalRice);
-  } catch(e) {}
-}
+// ── Modal helpers ──────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 function saveApiKey() {
   const v = document.getElementById('api-input').value.trim();
   if (!v) return;
-  try { localStorage.setItem('c_apikey', v); } catch(e) {}
   apiKey = v;
+  save('c_apikey', v);
   document.getElementById('api-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   startApp();
@@ -317,11 +289,10 @@ function openKeyModal() {
   document.getElementById('key-modal-input').value = apiKey;
   document.getElementById('key-modal').style.display = 'flex';
 }
-function closeKeyModal() { document.getElementById('key-modal').style.display = 'none'; }
 function saveKeyModal() {
   const v = document.getElementById('key-modal-input').value.trim();
-  if (v) { apiKey = v; try { localStorage.setItem('c_apikey', v); } catch(e) {} }
-  closeKeyModal();
+  if (v) { apiKey = v; save('c_apikey', v); }
+  closeModal('key-modal');
 }
 
 function openGoalModal() {
@@ -330,56 +301,79 @@ function openGoalModal() {
   document.getElementById('goal-pw-input').value = weightPw;
   document.getElementById('goal-modal').style.display = 'flex';
 }
-function closeGoalModal() { document.getElementById('goal-modal').style.display = 'none'; }
 function saveGoalModal() {
   const c = parseInt(document.getElementById('goal-cal-input').value);
   const r = parseInt(document.getElementById('goal-rice-input').value);
   const pw = document.getElementById('goal-pw-input').value;
-  if (c > 0) goalCal = c;
-  if (r > 0) goalRice = r;
+  if (c > 0) { goalCal = c; save('c_goalcal', c); }
+  if (r > 0) { goalRice = r; save('c_goalrice', r); }
   weightPw = pw;
   weightUnlocked = false;
-  try { localStorage.setItem('c_weightpw', pw); } catch(e) {}
-  saveGoals();
+  save('c_weightpw', pw);
   renderAll();
-  closeGoalModal();
+  closeModal('goal-modal');
 }
 
-function showTab(tab) {
-  if (tab === 'weight' && weightPw && !weightUnlocked) {
-    openPwModal();
-    return;
+function checkPw() {
+  const v = document.getElementById('pw-input').value;
+  if (v === weightPw) {
+    weightUnlocked = true;
+    closeModal('pw-modal');
+    doShowWeight();
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+    document.getElementById('pw-input').value = '';
   }
-  const isFood = tab === 'food';
-  document.getElementById('sections').style.display = isFood ? 'block' : 'none';
-  document.getElementById('weight-section').style.display = isFood ? 'none' : 'block';
-  document.getElementById('rice-box').style.display = isFood ? '' : 'none';
-  if (isFood) weightUnlocked = false;
-  document.getElementById('tab-food').className = 'tab-btn' + (isFood ? ' active' : '');
-  document.getElementById('tab-weight').className = 'tab-btn' + (!isFood ? ' active' : '');
-  if (!isFood) renderWeightSection();
 }
 
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function showTab(tab) {
+  if (tab === 'weight') {
+    if (weightPw && !weightUnlocked) {
+      document.getElementById('pw-input').value = '';
+      document.getElementById('pw-error').style.display = 'none';
+      document.getElementById('pw-modal').style.display = 'flex';
+      return;
+    }
+    doShowWeight();
+  } else {
+    weightUnlocked = false;
+    document.getElementById('sections').style.display = 'block';
+    document.getElementById('w-section').style.display = 'none';
+    document.getElementById('rice-box').style.display = '';
+    document.getElementById('tab-food').className = 'tab-btn active';
+    document.getElementById('tab-weight').className = 'tab-btn';
+  }
+}
+function doShowWeight() {
+  document.getElementById('sections').style.display = 'none';
+  document.getElementById('w-section').style.display = 'block';
+  document.getElementById('rice-box').style.display = 'none';
+  document.getElementById('tab-food').className = 'tab-btn';
+  document.getElementById('tab-weight').className = 'tab-btn active';
+  renderWeightSection();
+}
+
+// ── Totals ─────────────────────────────────────────────────────────────────
 function getTotals(keys) {
-  keys = keys || ['morning','lunch','snack','dinner'];
-  return keys.reduce((acc, key) => {
-    (mealData[key]||[]).forEach(e => {
-      acc.calories += e.total?.calories || 0;
-      acc.fat      += e.total?.fat      || 0;
-      acc.carbs    += e.total?.carbs    || 0;
-      acc.protein  += e.total?.protein  || 0;
+  return (keys || ['morning','lunch','snack','dinner']).reduce((a, k) => {
+    (mealData[k]||[]).forEach(e => {
+      a.calories += e.total?.calories || 0;
+      a.fat      += e.total?.fat      || 0;
+      a.carbs    += e.total?.carbs    || 0;
+      a.protein  += e.total?.protein  || 0;
     });
-    return acc;
+    return a;
   }, {calories:0, fat:0, carbs:0, protein:0});
 }
 
+// ── Render gauge ───────────────────────────────────────────────────────────
 function renderGauge(t) {
   const pct = Math.min(1, t.calories / goalCal);
   const over = t.calories > goalCal;
   const color = over ? '#ef4444' : pct > 0.85 ? '#f97316' : pct > 0.55 ? '#f59e0b' : '#22d3ee';
-  const circ = 2 * Math.PI * 76;
   const arc = document.getElementById('gauge-arc');
-  arc.style.strokeDashoffset = circ * (1 - pct);
+  arc.style.strokeDashoffset = 2 * Math.PI * 76 * (1 - pct);
   arc.style.stroke = color;
   const calEl = document.getElementById('gauge-cal');
   calEl.textContent = t.calories;
@@ -387,32 +381,31 @@ function renderGauge(t) {
   const remEl = document.getElementById('gauge-rem');
   remEl.textContent = over ? `+${t.calories - goalCal} kcal 超過` : `残り ${goalCal - t.calories} kcal`;
   remEl.style.color = over ? '#ef4444' : '#666';
-  const goalsEl = document.getElementById('gauge-goals');
-  if (goalsEl) goalsEl.innerHTML = `目標 ${goalCal} kcal<br>ご飯 ${goalRice}g/日`;
+  document.getElementById('gauge-sub').innerHTML = `目標 ${goalCal} kcal<br>ご飯 ${goalRice}g/日`;
 }
 
+// ── Render macros ──────────────────────────────────────────────────────────
 function renderMacros(t) {
-  const GOAL = {fat:60, carbs:220, protein:80};
-  document.getElementById('fat-val').textContent = t.fat + 'g';
-  document.getElementById('carbs-val').textContent = t.carbs + 'g';
-  document.getElementById('protein-val').textContent = t.protein + 'g';
+  const G = {fat:60, carbs:220, protein:80};
   ['fat','carbs','protein'].forEach(k => {
-    const bar = document.getElementById(k + '-bar');
-    const pct = Math.min(100, t[k] / GOAL[k] * 100);
-    bar.style.width = pct + '%';
-    bar.style.background = t[k] > GOAL[k] ? '#ef4444' : bar.style.background;
+    document.getElementById(k+'-val').textContent = t[k] + 'g';
+    const bar = document.getElementById(k+'-bar');
+    bar.style.width = Math.min(100, t[k]/G[k]*100) + '%';
   });
+  document.getElementById('fat-bar').style.background    = t.fat     > G.fat     ? '#ef4444' : '#ec4899';
+  document.getElementById('carbs-bar').style.background  = t.carbs   > G.carbs   ? '#ef4444' : '#818cf8';
+  document.getElementById('protein-bar').style.background= t.protein > G.protein ? '#ef4444' : '#22d3ee';
 }
 
-function renderSegBar() {
+// ── Render seg bar ─────────────────────────────────────────────────────────
+function renderSeg() {
   const bar = document.getElementById('seg-bar');
   const legend = document.getElementById('seg-legend');
   bar.innerHTML = ''; legend.innerHTML = '';
   MEALS.forEach(m => {
     const cal = (mealData[m.key]||[]).reduce((s,e)=>s+(e.total?.calories||0),0);
-    const w = Math.min(100, cal / goalCal * 100);
     const d = document.createElement('div');
-    d.style.cssText = `width:${w}%;background:${m.color};transition:width .5s`;
+    d.style.cssText = `width:${Math.min(100,cal/goalCal*100)}%;background:${m.color};transition:width .5s`;
     bar.appendChild(d);
     const item = document.createElement('div');
     item.className = 'seg-item';
@@ -421,54 +414,32 @@ function renderSegBar() {
   });
 }
 
-function renderRiceAdvice() {
+// ── Rice advice ────────────────────────────────────────────────────────────
+function renderRice() {
   const box = document.getElementById('rice-box');
-  const content = document.getElementById('rice-content');
-  const hasDinner = (mealData.dinner||[]).length > 0;
-  const sofar = getTotals(['morning','lunch','snack']);
-  if (sofar.calories === 0) { box.style.display = 'none'; return; }
+  const cnt = document.getElementById('rice-content');
+  const sf = getTotals(['morning','lunch','snack']);
+  if (!sf.calories) { box.style.display='none'; return; }
   box.style.display = 'block';
-
-  if (hasDinner) {
+  if ((mealData.dinner||[]).length > 0) {
     const all = getTotals();
     const diff = all.calories - goalCal;
-    if (diff > 100) content.innerHTML = `今日は <span style="color:#ef4444;font-weight:700">+${diff} kcal 超過</span>。明日は少し控えめに。`;
-    else if (diff < -200) content.innerHTML = `まだ <span style="color:#10b981;font-weight:700">${Math.abs(diff)} kcal</span> 余裕あり。`;
-    else content.innerHTML = `<span style="color:#10b981;font-weight:700">今日はほぼ目標通り👍</span>`;
+    cnt.innerHTML = diff > 100 ? `今日は <span style="color:#ef4444;font-weight:700">+${diff} kcal 超過</span>。明日は少し控えめに。`
+      : diff < -200 ? `まだ <span style="color:#10b981;font-weight:700">${Math.abs(diff)} kcal</span> 余裕あり。`
+      : `<span style="color:#10b981;font-weight:700">ほぼ目標通り！今日よく頑張りました👍</span>`;
     return;
   }
-
-  // Calculate rice remaining
-  // All carbs (rice + non-rice) are converted to rice equivalent
-  // Rice: 100g = 37g carbs
-  let totalCarbsG = 0;
-  ['morning','lunch','snack'].forEach(key => {
-    (mealData[key]||[]).forEach(e => {
-      totalCarbsG += e.total?.carbs || 0;
-    });
-  });
-
-  // Convert total carbs to rice equivalent grams
-  const totalCarbsAsRiceG = Math.round(totalCarbsG / RICE_CARBS * 100);
-  const riceRem = Math.max(0, goalRice - totalCarbsAsRiceG);
-  const riceEatenG = totalCarbsAsRiceG; // for display
-  const nonRiceAsRiceG = 0; // merged into totalCarbsAsRiceG
-  const remCal = goalCal - sofar.calories;
+  const totalCarbsAsRice = Math.round(sf.carbs / 37 * 100);
+  const riceRem = Math.max(0, goalRice - totalCarbsAsRice);
+  const remCal = goalCal - sf.calories;
   const riceKcal = Math.round(riceRem * 1.68);
-  const remCalAfterRice = remCal - riceKcal;
   const bowl = riceRem >= 250 ? '大盛り' : riceRem >= 180 ? '普通盛り' : riceRem >= 120 ? '小盛り' : riceRem >= 60 ? '少量' : 'なし';
-
-  if (riceRem <= 0) {
-    content.innerHTML = `今日の糖質はご飯目標分に達しています。夕食は <span style="color:#f59e0b;font-weight:700">ご飯なし</span> でおかず中心に。残り ${remCal} kcal。`;
-  } else {
-    content.innerHTML = `
-      糖質合計 ${totalCarbsG}g → ご飯換算 ${totalCarbsAsRiceG}g 消費（目標 ${goalRice}g）<br>
-      🍚 夕食のご飯 <span style="color:#10b981;font-weight:700;font-size:17px">${riceRem}g（${bowl}）</span><br>
-      <span style="font-size:12px;color:#555">ご飯で ${riceKcal} kcal・おかずで残り ${remCalAfterRice} kcal</span>
-    `;
-  }
+  cnt.innerHTML = riceRem <= 0
+    ? `糖質がご飯目標に達しています。夕食は <span style="color:#f59e0b;font-weight:700">ご飯なし</span> でおかず中心に。残り ${remCal} kcal。`
+    : `糖質合計 ${sf.carbs}g → ご飯換算 ${totalCarbsAsRice}g（目標 ${goalRice}g）<br>🍚 夕食のご飯 <span style="color:#10b981;font-weight:700;font-size:17px">${riceRem}g（${bowl}）</span><br><span style="font-size:12px;color:#555">ご飯で ${riceKcal} kcal・おかずで残り ${remCal - riceKcal} kcal</span>`;
 }
 
+// ── Render sections ────────────────────────────────────────────────────────
 function renderSections() {
   const sec = document.getElementById('sections');
   sec.innerHTML = '';
@@ -476,15 +447,16 @@ function renderSections() {
     const entries = mealData[m.key] || [];
     const total = entries.reduce((s,e)=>s+(e.total?.calories||0),0);
     const isOpen = openSecs[m.key];
-    const miniW = Math.min(100, total / (goalCal * 0.35) * 100);
+    const miniW = Math.min(100, total/(goalCal*0.35)*100);
+    const myFavs = favorites.filter(f => f.mealKey === m.key || !f.mealKey);
 
     const div = document.createElement('div');
     div.className = 'meal-sec';
     if (entries.length > 0) div.style.borderColor = m.color + '30';
 
-    let entriesHTML = entries.map((e, i) => `
-      <div class="entry" id="entry-${m.key}-${i}">
-        <div class="entry-head" onclick="toggleEntry('${m.key}',${i})">
+    const entriesHTML = entries.map((e,i) => `
+      <div class="entry">
+        <div class="entry-hdr" onclick="toggleEntry('${m.key}',${i})">
           <div class="entry-text">
             <div class="entry-name">${e.input}</div>
             <div class="entry-nums">
@@ -494,440 +466,313 @@ function renderSections() {
               <span>P ${e.total?.protein||0}g</span>
             </div>
           </div>
-          <button class="fav-btn ${isFavorite(e.input)?'saved':''}" onclick="event.stopPropagation();toggleFav('${m.key}',${i})" title="お気に入り">${isFavorite(e.input)?'⭐':'☆'}</button>
+          <button class="fav-star" onclick="event.stopPropagation();toggleFav('${m.key}',${i})" title="お気に入り">${favorites.some(f=>f.input===e.input)?'⭐':'☆'}</button>
           <button class="entry-del" onclick="event.stopPropagation();deleteEntry('${m.key}',${i})">✕</button>
         </div>
-        <div class="entry-detail" id="detail-${m.key}-${i}">
+        <div class="entry-detail" id="det-${m.key}-${i}">
           ${(e.meals||[]).map(f=>`<div class="entry-row"><span>${f.name} <span style="color:#333">(${f.amount})</span></span><span>${f.calories} kcal</span></div>`).join('')}
           ${e.advice ? `<div class="advice-box">💬 ${e.advice}</div>` : ''}
         </div>
-      </div>
-    `).join('');
+      </div>`).join('');
+
+    const favsHTML = myFavs.length ? `<div class="fav-chips">${myFavs.map((f,fi)=>`
+      <div class="fav-chip" onclick="applyFav('${m.key}',${favorites.indexOf(f)})">
+        ⭐ ${f.input.length>12?f.input.slice(0,12)+'…':f.input}
+        <span class="fav-chip-kcal">${f.total?.calories||0}kcal</span>
+        <span class="fav-chip-del" onclick="event.stopPropagation();deleteFav(${favorites.indexOf(f)})">✕</span>
+      </div>`).join('')}</div>` : '';
+
+    const quickHTML = m.key === 'morning' ? `<div class="quick-btns">${
+      QUICK_MORNING.map(q=>`<button class="quick-btn" onclick="addQuick('morning','${q.name}',${q.cal},${q.fat},${q.carbs},${q.protein})">${q.name}</button>`).join('')
+    }</div>` : '';
+
+    const aeteBtnHTML = m.key === 'lunch' ? `<button class="aete-btn" onclick="openAete('lunch')">🍱 あえて</button>` : '';
 
     div.innerHTML = `
-      <div class="meal-header" onclick="toggleSec('${m.key}')">
-        <span class="meal-emoji">${m.emoji}</span>
+      <div class="meal-hdr" onclick="toggleSec('${m.key}')">
+        <span style="font-size:18px">${m.emoji}</span>
         <div class="meal-info">
           <div class="meal-title-row">
             <span class="meal-name">${m.label}</span>
             ${total > 0 ? `<span class="meal-kcal" style="color:${m.color}">${total} kcal</span>` : ''}
-            ${entries.length > 0 ? `<span class="meal-count">${entries.length}件</span>` : ''}
+            ${entries.length > 0 ? `<span class="meal-cnt">${entries.length}件</span>` : ''}
           </div>
           <div class="meal-mini"><div class="meal-mini-fill" style="width:${miniW}%;background:${m.color}"></div></div>
         </div>
-        <span class="meal-arrow">${isOpen ? '▲' : '▼'}</span>
+        <span style="color:#333;font-size:11px">${isOpen?'▲':'▼'}</span>
       </div>
-      ${isOpen ? `
-      <div class="meal-body">
+      ${isOpen ? `<div class="meal-body">
         ${entriesHTML}
-        ${favorites.length > 0 ? '<div class="fav-list">' + favorites.map((f,fi)=>`
-          <div class="fav-chip" onclick="applyFavorite('${m.key}',favorites[${fi}])">
-            ⭐ ${f.input.length>14?f.input.slice(0,14)+'…':f.input} <span style="color:#555;font-size:10px">${f.total?.calories||0}kcal</span>
-            <span class="fav-chip-del" onclick="event.stopPropagation();deleteFavorite(favorites[${fi}].input)">✕</span>
-          </div>`).join('') + '</div>' : ''}
+        ${favsHTML}
+        ${quickHTML}
         <div class="input-box">
-          ${m.key === 'morning' ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
-            <button onclick="addQuick('morning','ご飯140g',235,0,52,4)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">ご飯140g</button>
-            <button onclick="addQuick('morning','卵焼き',80,5,2,6)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">卵焼き</button>
-            <button onclick="addQuick('morning','納豆',100,5,6,8)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">納豆</button>
-            <button onclick="addQuick('morning','味噌汁',40,1,5,2)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">味噌汁</button>
-            <button onclick="addQuick('morning','レタスサラダ',20,0,3,1)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">レタスサラダ</button>
-            <button onclick="addQuick('morning','りんご',80,0,20,0)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">りんご</button>
-            <button onclick="addQuick('morning','みかん',45,0,11,1)" style="background:#0f0f1a;border:1px solid #f59e0b40;border-radius:20px;padding:4px 10px;font-size:11px;color:#f59e0b;cursor:pointer">みかん</button>
-          </div>` : ''}
-          <textarea id="ta-${m.key}" rows="2" placeholder="${m.label}を入力… 例: ご飯1杯・鮭の塩焼き"></textarea>
-          <div class="input-footer">
-            <span class="input-hint">Enterで送信</span>
-            <div style="display:flex;gap:6px">
-              ${m.key === 'lunch' ? `<button onclick="openAeteModal('lunch')" style="background:#09090f;border:1px solid #818cf840;border-radius:9px;padding:8px 10px;color:#818cf8;font-size:11px;font-weight:700;cursor:pointer">🍱 あえて</button>` : ''}
-              <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
-            </div>
-          </div>
-          <div class="err-msg" id="err-${m.key}"></div>
-        </div>
-      </div>` : ''}
-    `;
-    sec.appendChild(div);
+          <textarea id="ta-${m.key}" rows="2" placeholder="${m.label}を入力… 例: ご飯1杯・鮭の塩焼き" style="width:100%;background:none;border:none;color:#ccc;font-size:13px;line-height:1.6"></textarea>
 
-    if (isOpen) {
-      const ta = document.getElementById(`ta-${m.key}`);
-      if (ta) ta.addEventListener('keydown', ev => {
-        if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); analyze(m.key); }
-      });
-    }
+```
+      <div class="input-footer">
+        <span class="input-hint">Enterで送信</span>
+        <div class="input-btns">
+          ${aeteBtnHTML}
+          <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
+        </div>
+      </div>
+      <div class="err-msg" id="err-${m.key}"></div>
+    </div>
+  </div>` : ''}`;
+sec.appendChild(div);
+
+if (isOpen) {
+  const ta = document.getElementById(`ta-${m.key}`);
+  if (ta) ta.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); analyze(m.key); }
   });
+}
+```
+
+});
 }
 
 function renderAll() {
-  const t = getTotals();
-  renderGauge(t);
-  renderMacros(t);
-  renderSegBar();
-  renderSections();
-  renderRiceAdvice();
+const t = getTotals();
+renderGauge(t);
+renderMacros(t);
+renderSeg();
+renderSections();
+renderRice();
 }
 
-function toggleSec(key) {
-  openSecs[key] = !openSecs[key];
-  renderAll();
+// ── Actions ────────────────────────────────────────────────────────────────
+function toggleSec(key) { openSecs[key] = !openSecs[key]; renderAll(); }
+function toggleEntry(key, i) {
+const el = document.getElementById(`det-${key}-${i}`);
+if (el) el.style.display = el.style.display === ‘none’ ? ‘block’ : ‘none’;
 }
+function deleteEntry(key, i) { mealData[key].splice(i, 1); renderAll(); }
 
-function toggleEntry(key, idx) {
-  const el = document.getElementById(`detail-${key}-${idx}`);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+function toggleFav(key, i) {
+const entry = mealData[key][i];
+if (!entry) return;
+const idx = favorites.findIndex(f => f.input === entry.input);
+if (idx >= 0) { favorites.splice(idx, 1); }
+else { favorites.push({…entry, mealKey: key}); }
+save(‘c_favs’, favorites);
+renderAll();
 }
+function applyFav(key, fi) {
+const f = favorites[fi];
+if (!f) return;
+mealData[key].push({…f, id: Date.now()});
+renderAll();
+}
+function deleteFav(fi) { favorites.splice(fi, 1); save(‘c_favs’, favorites); renderAll(); }
 
-function deleteEntry(key, idx) {
-  mealData[key].splice(idx, 1);
-  renderAll();
+function addQuick(key, name, cal, fat, carbs, protein) {
+mealData[key].push({
+input: name,
+meals: [{name, calories:cal, fat, carbs, protein, amount:‘1食分’}],
+total: {calories:cal, fat, carbs, protein},
+advice: ‘’, score: 7, id: Date.now()
+});
+renderAll();
 }
 
 async function analyze(mealKey) {
-  const ta = document.getElementById(`ta-${mealKey}`);
-  const btn = document.getElementById(`btn-${mealKey}`);
-  const err = document.getElementById(`err-${mealKey}`);
-  const text = ta.value.trim();
-  if (!text) return;
-
-  const color = MEALS.find(m=>m.key===mealKey).color;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> 解析中…';
-  btn.style.background = '#1a1a2e';
-  btn.style.color = '#555';
-  err.style.display = 'none';
-
-  try {
-    const res = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({text, apiKey}),
-    });
-    const parsed = await res.json();
-    if (!res.ok) throw new Error(parsed.error || 'HTTP ' + res.status);
-    mealData[mealKey].push({input:text, ...parsed, id:Date.now()});
-    ta.value = '';
-    renderAll();
-  } catch(e) {
-    err.textContent = '⚠️ ' + e.message;
-    err.style.display = 'block';
-  }
-
-  btn.disabled = false;
-  btn.innerHTML = '解析する';
-  btn.style.background = color;
-  btn.style.color = '#000';
+const ta = document.getElementById(`ta-${mealKey}`);
+const btn = document.getElementById(`btn-${mealKey}`);
+const err = document.getElementById(`err-${mealKey}`);
+const text = ta.value.trim();
+if (!text) return;
+const color = MEALS.find(m=>m.key===mealKey).color;
+btn.disabled = true;
+btn.innerHTML = ‘<span class="spinner"></span> 解析中…’;
+btn.style.background = ‘#1a1a2e’; btn.style.color = ‘#555’;
+err.style.display = ‘none’;
+try {
+const res = await fetch(’/api/analyze’, {
+method:‘POST’, headers:{‘Content-Type’:‘application/json’},
+body: JSON.stringify({text, apiKey}),
+});
+const parsed = await res.json();
+if (!res.ok) throw new Error(parsed.error || ’HTTP ’ + res.status);
+mealData[mealKey].push({input:text, …parsed, id:Date.now()});
+ta.value = ‘’;
+renderAll();
+} catch(e) {
+err.textContent = ’⚠️ ’ + e.message;
+err.style.display = ‘block’;
+}
+btn.disabled = false; btn.innerHTML = ‘解析する’;
+btn.style.background = color; btn.style.color = ‘#000’;
 }
 
-// Weight
+// ── Aete DB ────────────────────────────────────────────────────────────────
+const AETE_DB = [
+{id:1, name:“山椒香るぶりの塩焼き、生姜鶏そぼろまぜご飯”, calories:455, protein:23, fat:14, carbs:63, sugar:56},
+{id:2, name:“トマト生姜焼き、枝豆と干しえびのまぜご飯”, calories:454, protein:24, fat:17, carbs:55, sugar:47},
+{id:3, name:“ギョーザ、枝豆と干しえびのまぜご飯”, calories:464, protein:24, fat:18, carbs:55, sugar:48},
+{id:4, name:“若鶏の香ばし醤油焼き、鮭ときのこのまぜご飯”, calories:469, protein:20, fat:16, carbs:66, sugar:57},
+{id:8, name:“香味だれ油淋鶏と彩り野菜、たけのこと蓮根のまぜご飯”, calories:533, protein:19, fat:25, carbs:61, sugar:55},
+{id:9, name:“タルタルチキン南蛮、生姜鶏そぼろまぜご飯”, calories:465, protein:17, fat:20, carbs:57, sugar:51},
+{id:10, name:“揚げ海老タルタル、枝豆と干しえびのまぜご飯”, calories:416, protein:17, fat:18, carbs:50, sugar:43},
+{id:11, name:“甘辛海老チリ、オムライス風まぜご飯”, calories:469, protein:14, fat:18, carbs:66, sugar:60},
+{id:13, name:“アボカドタルタル海老カツ、生姜と枝豆のまぜご飯”, calories:541, protein:13, fat:25, carbs:70, sugar:62},
+{id:14, name:“甘辛豚プルコギ、さつまいもと牛蒡のまぜご飯”, calories:402, protein:16, fat:15, carbs:55, sugar:47},
+{id:15, name:“梅香る豚しゃぶ、わかめとたけのこのまぜご飯”, calories:409, protein:18, fat:13, carbs:58, sugar:52},
+{id:16, name:“トマトタルタルサーモンフライ、枝豆と蓮根のまぜご飯”, calories:486, protein:14, fat:19, carbs:68, sugar:61},
+{id:17, name:“和風ガパオ、コーンバターライス”, calories:483, protein:17, fat:18, carbs:67, sugar:60},
+{id:18, name:“白身魚のムニエル風、たけのこと蓮根のまぜご飯”, calories:454, protein:15, fat:16, carbs:66, sugar:60},
+{id:19, name:“柚子胡椒だれ豚しゃぶ、生姜鶏そぼろまぜご飯”, calories:433, protein:18, fat:12, carbs:67, sugar:60},
+{id:20, name:“月見スパイスキーマカレー、枝豆ご飯”, calories:441, protein:17, fat:13, carbs:68, sugar:60},
+{id:21, name:“トマトチーズハンバーグ、枝豆バター醤油ご飯”, calories:555, protein:21, fat:22, carbs:72, sugar:64},
+{id:22, name:“デミグラスハンバーグ、焼きとうもろこしご飯”, calories:526, protein:18, fat:23, carbs:65, sugar:58},
+{id:23, name:“青椒肉絲、きのこと根菜のまぜご飯”, calories:452, protein:16, fat:17, carbs:62, sugar:56},
+{id:24, name:“磯辺七味から揚げ、根菜の中華風まぜご飯”, calories:454, protein:22, fat:14, carbs:63, sugar:57},
+{id:25, name:“白身魚タルタル、枝豆と干しえびのまぜご飯”, calories:565, protein:18, fat:29, carbs:61, sugar:55},
+{id:26, name:“生姜香る鶏そぼろ、きのこと根菜のまぜご飯”, calories:442, protein:15, fat:15, carbs:65, sugar:59},
+{id:27, name:“牛肉オイスター炒め、さつまいもと牛蒡のまぜご飯”, calories:430, protein:15, fat:16, carbs:60, sugar:53},
+{id:28, name:“ガリバタチキン、さつまいもと牛蒡のまぜご飯”, calories:556, protein:20, fat:25, carbs:66, sugar:59},
+{id:29, name:“スパイシータコライス、蓮根のバターご飯”, calories:466, protein:14, fat:19, carbs:63, sugar:57},
+{id:30, name:“ピリ辛ビビンバ、枝豆のまぜご飯”, calories:515, protein:21, fat:23, carbs:60, sugar:52},
+{id:31, name:“塩麹ケイジャンチキン、ジャンバラヤ風まぜご飯”, calories:454, protein:24, fat:17, carbs:55, sugar:48},
+{id:32, name:“照り焼きチキンマヨ風ソース、鶏そぼろまぜご飯”, calories:473, protein:24, fat:17, carbs:59, sugar:53},
+{id:33, name:“山椒香る四川風麻婆豆腐、きのこと根菜のまぜご飯”, calories:491, protein:18, fat:20, carbs:63, sugar:57},
+{id:34, name:“グリーンキーマカレー、焼きとうもろこしご飯”, calories:519, protein:13, fat:22, carbs:71, sugar:63},
+{id:35, name:“ホーリーバジル香るガパオ、枝豆と生姜のまぜご飯”, calories:428, protein:18, fat:12, carbs:66, sugar:58},
+{id:36, name:“揚げ豚と豆鼓の回鍋肉風、干しえびとごまの中華風まぜご飯”, calories:488, protein:16, fat:20, carbs:64, sugar:58},
+{id:37, name:“カレーハンバーグ、コーンバターライス”, calories:526, protein:18, fat:20, carbs:73, sugar:64},
+{id:38, name:“照り焼き月見ハンバーグ、根菜とハーブのバターライス”, calories:492, protein:17, fat:16, carbs:74, sugar:66},
+{id:39, name:“月見チキンカツデミソース、根菜ときのこのまぜご飯”, calories:499, protein:13, fat:25, carbs:60, sugar:51},
+{id:40, name:“にんにく醤油から揚げ、ごま油香る大根の葉まぜご飯”, calories:498, protein:24, fat:18, carbs:63, sugar:57},
+{id:41, name:“三元豚のロースカツカレー、枝豆ご飯”, calories:536, protein:17, fat:21, carbs:74, sugar:66},
+{id:42, name:“ネギ塩竜田揚げ、たけのこと蓮根のまぜご飯”, calories:488, protein:19, fat:20, carbs:61, sugar:55},
+{id:43, name:“チーズ風味ヤンニョムチキン、人参とたけのこのまぜご飯”, calories:463, protein:18, fat:18, carbs:60, sugar:55},
+{id:44, name:“ルーローハン、たけのこと蓮根のまぜご飯”, calories:532, protein:15, fat:23, carbs:69, sugar:63},
+{id:45, name:“とろっと卵の親子丼、根菜ときのこのまぜご飯”, calories:399, protein:24, fat:12, carbs:52, sugar:45},
+{id:46, name:“三元豚のカツ丼、牛蒡と干しえびのまぜご飯”, calories:472, protein:14, fat:19, carbs:64, sugar:58},
+{id:47, name:“黒酢酢豚、枝豆と人参のまぜご飯”, calories:467, protein:15, fat:19, carbs:63, sugar:56},
+{id:48, name:“とろっと卵のミートソースドリア、蓮根のターメリックライス”, calories:443, protein:12, fat:16, carbs:66, sugar:60},
+{id:49, name:“トマトのキーマカレー、コーンのまぜご飯”, calories:447, protein:16, fat:12, carbs:73, sugar:65},
+{id:50, name:“こく旨海老カレー、枝豆と鮭のバターライス”, calories:502, protein:12, fat:21, carbs:70, sugar:63},
+{id:51, name:“鯵フライ、大根の葉と干しえびのまぜご飯”, calories:581, protein:16, fat:26, carbs:74, sugar:68},
+{id:52, name:“和風醤油ハンバーグ、根菜ときのこのまぜご飯”, calories:483, protein:17, fat:18, carbs:67, sugar:60},
+{id:53, name:“麻辣キーマカレー、干しえびのガーリックライス”, calories:512, protein:13, fat:24, carbs:65, sugar:57},
+{id:54, name:“ロコモコハンバーグ、根菜のドライカレー”, calories:503, protein:18, fat:17, carbs:73, sugar:65},
+{id:55, name:“豚丼、牛蒡とさつまいものまぜご飯”, calories:398, protein:11, fat:12, carbs:64, sugar:59},
+{id:56, name:“海南鶏飯、根菜と枝豆のチキンライス”, calories:502, protein:19, fat:19, carbs:67, sugar:61},
+{id:57, name:“鰆の西京焼き、枝豆と人参のまぜご飯”, calories:416, protein:19, fat:13, carbs:59, sugar:53},
+{id:58, name:“鱈のパン粉焼きバター醤油味、焼きとうもろこしと枝豆ご飯”, calories:439, protein:19, fat:15, carbs:60, sugar:54},
+{id:60, name:“白身魚のムニエル風、たけのこと蓮根のまぜご飯(No.60)”, calories:454, protein:15, fat:16, carbs:66, sugar:60},
+{id:62, name:“トムヤムクン風味から揚げ、たけのこと蓮根のまぜご飯”, calories:500, protein:23, fat:19, carbs:63, sugar:57},
+{id:63, name:“トムヤムから揚げ、たけのこと蓮根のまぜご飯(No.63)”, calories:500, protein:23, fat:19, carbs:63, sugar:57},
+{id:64, name:“干しえびとガーリックライス弁当”, calories:512, protein:13, fat:24, carbs:65, sugar:57},
+];
+
+function openAete(key) {
+aeteMealKey = key;
+document.getElementById(‘aete-search’).value = ‘’;
+renderAeteList();
+document.getElementById(‘aete-modal’).style.display = ‘flex’;
+}
+function renderAeteList() {
+const q = document.getElementById(‘aete-search’).value.toLowerCase();
+const filtered = q ? AETE_DB.filter(i=>i.name.toLowerCase().includes(q)) : AETE_DB;
+document.getElementById(‘aete-list’).innerHTML = filtered.map(item=>` <div onclick="applyAete(${item.id})" style="padding:12px 14px;border-bottom:1px solid #0f0f1c;cursor:pointer;display:flex;justify-content:space-between;align-items:center"> <div style="flex:1;min-width:0"> <div style="font-size:12px;color:#ccc;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No.${item.id} ${item.name}</div> <div style="font-size:11px;color:#555;display:flex;gap:10px"> <span style="color:#f59e0b">${item.calories}kcal</span> <span>脂${item.fat}g</span> <span>糖${item.sugar||item.carbs}g</span> <span>P${item.protein}g</span> </div> </div> <span style="color:#818cf8;font-size:20px;margin-left:10px;flex-shrink:0">+</span> </div>`).join(’’) || ‘<div style="padding:20px;text-align:center;color:#555;font-size:13px">見つかりません</div>’;
+}
+function applyAete(id) {
+const item = AETE_DB.find(x=>x.id===id);
+if (!item) return;
+mealData[aeteMealKey].push({
+input: `あえて、No.${item.id} ${item.name}`,
+meals: [{name:item.name, calories:item.calories, fat:item.fat, carbs:item.carbs, protein:item.protein, amount:‘1食’}],
+total: {calories:item.calories, fat:item.fat, carbs:item.carbs, protein:item.protein},
+advice: `糖質${item.sugar||item.carbs}g・タンパク質${item.protein}gで栄養バランスの良いお弁当です。`,
+score: 8, id: Date.now()
+});
+renderAll();
+closeModal(‘aete-modal’);
+}
+
+// ── Weight ─────────────────────────────────────────────────────────────────
 function todayStr() { return new Date().toISOString().slice(0,10); }
 
 function saveWeight() {
-  const v = parseFloat(document.getElementById('w-input').value);
-  if (!v || v < 20 || v > 300) return;
-  weightData[todayStr()] = v;
-  try { localStorage.setItem('c_weight', JSON.stringify(weightData)); } catch(e) {}
-  renderWeightSection();
+const v = parseFloat(document.getElementById(‘w-input’).value);
+if (!v || v < 20 || v > 300) return;
+weightData[todayStr()] = v;
+save(‘c_weight’, weightData);
+renderWeightSection();
 }
 
 function renderWeightSection() {
-  const today = todayStr();
-  if (weightData[today]) document.getElementById('w-input').value = weightData[today];
-
-  const cmp = document.getElementById('w-compare');
-  const yest = new Date(); yest.setDate(yest.getDate()-1);
-  const yKey = yest.toISOString().slice(0,10);
-  const yVal = weightData[yKey];
-  const tVal = weightData[today];
-  if (tVal && yVal) {
-    const diff = (tVal - yVal).toFixed(1);
-    const color = diff > 0 ? '#ef4444' : diff < 0 ? '#10b981' : '#555';
-    const emoji = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
-    cmp.innerHTML = `<span style="color:${color};font-size:15px;font-weight:700">${emoji} 前日比 ${diff>0?'+':''}${diff} kg</span>`;
-  } else {
-    cmp.innerHTML = tVal ? '<span style="color:#555;font-size:12px">前日のデータなし</span>' : '';
-  }
-
-  drawChart();
-
-  const keys = Object.keys(weightData).sort().slice(-7).reverse();
-  const list = document.getElementById('w-list');
-  list.innerHTML = keys.map(k => {
-    const d = new Date(k+'T00:00:00');
-    const label = d.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric',weekday:'short'});
-    const val = weightData[k];
-    const allKeys = Object.keys(weightData).sort();
-    const prev = weightData[allKeys[allKeys.indexOf(k)-1]];
-    let diffStr = '';
-    if (prev) {
-      const df = (val-prev).toFixed(1);
-      diffStr = `<span style="font-size:11px;color:${df>0?'#ef4444':df<0?'#10b981':'#555'}">${df>0?'+':''}${df}</span>`;
-    }
-    const isToday = k === today;
-    return `<div class="w-list-item">
-      <span style="color:${isToday?'#818cf8':'#666'}">${label}${isToday?' 今日':''}</span>
-      <div style="display:flex;align-items:center;gap:8px">${diffStr}<span style="font-family:monospace;font-size:14px;color:${isToday?'#818cf8':'#ccc'};font-weight:${isToday?700:400}">${val} kg</span></div>
-    </div>`;
-  }).join('');
+const today = todayStr();
+if (weightData[today]) document.getElementById(‘w-input’).value = weightData[today];
+const cmp = document.getElementById(‘w-compare’);
+const yest = new Date(); yest.setDate(yest.getDate()-1);
+const yKey = yest.toISOString().slice(0,10);
+const tVal = weightData[today], yVal = weightData[yKey];
+if (tVal && yVal) {
+const diff = (tVal-yVal).toFixed(1);
+const color = diff > 0 ? ‘#ef4444’ : diff < 0 ? ‘#10b981’ : ‘#555’;
+const emoji = diff > 0 ? ‘📈’ : diff < 0 ? ‘📉’ : ‘➡️’;
+cmp.innerHTML = `<span style="color:${color};font-size:15px;font-weight:700">${emoji} 前日比 ${diff>0?'+':''}${diff} kg</span>`;
+} else { cmp.textContent = tVal ? ‘前日のデータなし’ : ‘’; }
+drawChart();
+const keys = Object.keys(weightData).sort().slice(-7).reverse();
+document.getElementById(‘w-list’).innerHTML = keys.map(k => {
+const d = new Date(k+‘T00:00:00’);
+const label = d.toLocaleDateString(‘ja-JP’,{month:‘numeric’,day:‘numeric’,weekday:‘short’});
+const val = weightData[k];
+const allKeys = Object.keys(weightData).sort();
+const prev = weightData[allKeys[allKeys.indexOf(k)-1]];
+let diffStr = ‘’;
+if (prev) { const df=(val-prev).toFixed(1); diffStr=`<span style="font-size:11px;color:${df>0?'#ef4444':df<0?'#10b981':'#555'}">${df>0?'+':''}${df}</span>`; }
+const isT = k === today;
+return `<div class="w-list-item"><span style="color:${isT?'#818cf8':'#666'}">${label}${isT?' 今日':''}</span><div style="display:flex;align-items:center;gap:8px">${diffStr}<span style="font-family:monospace;font-size:14px;color:${isT?'#818cf8':'#ccc'};font-weight:${isT?700:400}">${val} kg</span></div></div>`;
+}).join(’’);
 }
 
 function drawChart() {
-  const canvas = document.getElementById('w-chart');
-  if (!canvas) return;
-  const W = canvas.offsetWidth || 320, H = 160;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = W * dpr; canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const days = Array.from({length:14}, (_,i) => {
-    const d = new Date(); d.setDate(d.getDate()-(13-i));
-    return d.toISOString().slice(0,10);
-  });
-  const vals = days.map(d => weightData[d] || null);
-  const valid = vals.filter(v=>v!==null);
-  if (valid.length === 0) {
-    ctx.fillStyle='#333'; ctx.font='12px sans-serif'; ctx.textAlign='center';
-    ctx.fillText('データがありません', W/2, H/2); return;
-  }
-
-  const minV = Math.min(...valid)-1, maxV = Math.max(...valid)+1;
-  const pad = {t:14,b:22,l:30,r:10};
-  const gW = W-pad.l-pad.r, gH = H-pad.t-pad.b;
-  const xS = i => pad.l + i/13*gW;
-  const yS = v => pad.t + gH - (v-minV)/(maxV-minV)*gH;
-
-  ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1;
-  [0,1,2,3].forEach(i=>{
-    const y=pad.t+i/3*gH;
-    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
-    ctx.fillStyle='#333'; ctx.font='9px monospace'; ctx.textAlign='right';
-    ctx.fillText((maxV-i/3*(maxV-minV)).toFixed(1), pad.l-3, y+3);
-  });
-
-  days.forEach((d,i)=>{
-    if(i%2===0){
-      const dd=new Date(d+'T00:00:00');
-      ctx.fillStyle='#333'; ctx.font='9px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(`${dd.getMonth()+1}/${dd.getDate()}`, xS(i), H-4);
-    }
-  });
-
-  const pts = vals.map((v,i)=>v!==null?{x:xS(i),y:yS(v)}:null).filter(Boolean);
-  if (pts.length < 1) return;
-
-  ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-  ctx.lineTo(pts[pts.length-1].x, H-pad.b);
-  ctx.lineTo(pts[0].x, H-pad.b); ctx.closePath();
-  ctx.fillStyle='rgba(129,140,248,0.12)'; ctx.fill();
-
-  ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-  ctx.strokeStyle='#818cf8'; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
-
-  const today = todayStr();
-  vals.forEach((v,i)=>{
-    if(!v) return;
-    const isT = days[i]===today;
-    ctx.beginPath(); ctx.arc(xS(i),yS(v),isT?5:3,0,Math.PI*2);
-    ctx.fillStyle='#818cf8'; ctx.fill();
-    if(isT){ctx.beginPath();ctx.arc(xS(i),yS(v),5,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();}
-  });
+const canvas = document.getElementById(‘w-chart’);
+if (!canvas) return;
+const W = canvas.offsetWidth||320, H = 160, dpr = window.devicePixelRatio||1;
+canvas.width = W*dpr; canvas.height = H*dpr;
+const ctx = canvas.getContext(‘2d’);
+ctx.scale(dpr, dpr);
+const days = Array.from({length:14},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(13-i));return d.toISOString().slice(0,10);});
+const vals = days.map(d=>weightData[d]||null);
+const valid = vals.filter(v=>v!==null);
+if (!valid.length) { ctx.fillStyle=’#333’;ctx.font=‘12px sans-serif’;ctx.textAlign=‘center’;ctx.fillText(‘データがありません’,W/2,H/2);return; }
+const minV=Math.min(…valid)-1, maxV=Math.max(…valid)+1;
+const pad={t:14,b:22,l:30,r:10}, gW=W-pad.l-pad.r, gH=H-pad.t-pad.b;
+const xS=i=>pad.l+i/13*gW, yS=v=>pad.t+gH-(v-minV)/(maxV-minV)*gH;
+ctx.strokeStyle=’#1a1a2e’;ctx.lineWidth=1;
+[0,1,2,3].forEach(i=>{const y=pad.t+i/3*gH;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();ctx.fillStyle=’#333’;ctx.font=‘9px monospace’;ctx.textAlign=‘right’;ctx.fillText((maxV-i/3*(maxV-minV)).toFixed(1),pad.l-3,y+3);});
+days.forEach((d,i)=>{if(i%2===0){const dd=new Date(d+‘T00:00:00’);ctx.fillStyle=’#333’;ctx.font=‘9px sans-serif’;ctx.textAlign=‘center’;ctx.fillText(`${dd.getMonth()+1}/${dd.getDate()}`,xS(i),H-4);}});
+const pts=vals.map((v,i)=>v!==null?{x:xS(i),y:yS(v)}:null).filter(Boolean);
+if (!pts.length) return;
+ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+ctx.lineTo(pts[pts.length-1].x,H-pad.b);ctx.lineTo(pts[0].x,H-pad.b);ctx.closePath();
+ctx.fillStyle=‘rgba(129,140,248,0.12)’;ctx.fill();
+ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+ctx.strokeStyle=’#818cf8’;ctx.lineWidth=2;ctx.lineJoin=‘round’;ctx.stroke();
+const today=todayStr();
+vals.forEach((v,i)=>{if(!v)return;const isT=days[i]===today;ctx.beginPath();ctx.arc(xS(i),yS(v),isT?5:3,0,Math.PI*2);ctx.fillStyle=’#818cf8’;ctx.fill();if(isT){ctx.beginPath();ctx.arc(xS(i),yS(v),5,0,Math.PI*2);ctx.strokeStyle=’#fff’;ctx.lineWidth=1.5;ctx.stroke();}});
 }
 
-// Favorites
-let favorites = JSON.parse(localStorage.getItem('c_favs') || '[]');
-
-function saveFavorite(entry) {
-  const exists = favorites.some(f => f.input === entry.input);
-  if (exists) return;
-  favorites.push({input: entry.input, total: entry.total, meals: entry.meals, advice: entry.advice});
-  try { localStorage.setItem('c_favs', JSON.stringify(favorites)); } catch(e) {}
-}
-
-function deleteFavorite(input) {
-  favorites = favorites.filter(f => f.input !== input);
-  try { localStorage.setItem('c_favs', JSON.stringify(favorites)); } catch(e) {}
-  renderAll();
-}
-
-function applyFavorite(mealKey, fav) {
-  mealData[mealKey].push({...fav, id: Date.now()});
-  renderAll();
-}
-
-function isFavorite(input) {
-  return favorites.some(f => f.input === input);
-}
-
-function toggleFav(mealKey, idx) {
-  const entry = mealData[mealKey][idx];
-  if (!entry) return;
-  if (isFavorite(entry.input)) {
-    deleteFavorite(entry.input);
-  } else {
-    saveFavorite(entry);
-    renderAll();
-  }
-}
-
-
-// あえて、データベース
-const AETE_DB = [
-  {id:38, name:"照り焼き月見ハンバーグ、根菜とハーブのバターライス", calories:492, protein:17, fat:16, carbs:74, sugar:66},
-  {id:39, name:"月見チキンカツデミソース、根菜ときのこのまぜご飯", calories:499, protein:13, fat:25, carbs:60, sugar:51},
-  {id:40, name:"にんにく醤油から揚げ、ごま油香る大根の葉まぜご飯", calories:498, protein:24, fat:18, carbs:63, sugar:57},
-  {id:41, name:"三元豚のロースカツカレー、枝豆ご飯", calories:536, protein:17, fat:21, carbs:74, sugar:66},
-  {id:44, name:"ルーローハン、たけのこと蓮根のまぜご飯", calories:532, protein:15, fat:23, carbs:69, sugar:63},
-  {id:45, name:"とろっと卵の親子丼、根菜ときのこのまぜご飯", calories:399, protein:24, fat:12, carbs:52, sugar:45},
-  {id:46, name:"三元豚のカツ丼、牛蒡と干しえびのまぜご飯", calories:472, protein:14, fat:19, carbs:64, sugar:58},
-  {id:48, name:"とろっと卵のミートソースドリア、蓮根のターメリックライス", calories:443, protein:12, fat:16, carbs:66, sugar:60},
-  {id:49, name:"トマトのキーマカレー、コーンのまぜご飯", calories:447, protein:16, fat:12, carbs:73, sugar:65},
-  {id:50, name:"こく旨海老カレー、枝豆と鮭のバターライス", calories:502, protein:12, fat:21, carbs:70, sugar:63},
-  {id:51, name:"鯵フライ、大根の葉と干しえびのまぜご飯", calories:581, protein:16, fat:26, carbs:74, sugar:68},
-  {id:52, name:"和風醤油ハンバーグ、根菜ときのこのまぜご飯", calories:483, protein:17, fat:18, carbs:67, sugar:60},
-  {id:54, name:"ロコモコハンバーグ、根菜のドライカレー", calories:503, protein:18, fat:17, carbs:73, sugar:65},
-  {id:55, name:"豚丼、牛蒡とさつまいものまぜご飯", calories:398, protein:11, fat:12, carbs:64, sugar:59},
-  {id:56, name:"海南鶏飯、根菜と枝豆のチキンライス", calories:502, protein:19, fat:19, carbs:67, sugar:61},
-  {id:57, name:"鰆の西京焼き、枝豆と人参のまぜご飯", calories:416, protein:19, fat:13, carbs:59, sugar:53},
-  {id:58, name:"鱈のパン粉焼きバター醤油味、焼きとうもろこしと枝豆ご飯", calories:439, protein:19, fat:15, carbs:60, sugar:54},
-  {id:60, name:"白身魚のムニエル風、たけのこと蓮根のまぜご飯", calories:454, protein:15, fat:16, carbs:66, sugar:60},
-  {id:62, name:"トムヤムクン風味から揚げ、たけのこと蓮根のまぜご飯", calories:500, protein:23, fat:19, carbs:63, sugar:57},
-  {id:64, name:"干しえびとガーリックライス弁当", calories:512, protein:13, fat:24, carbs:65, sugar:57},
-  {id:14, name:"甘辛豚プルコギ、さつまいもと牛蒡のまぜご飯", calories:402, protein:16, fat:15, carbs:55, sugar:47},
-  {id:16, name:"トマトタルタルサーモンフライ、枝豆と蓮根のまぜご飯", calories:486, protein:14, fat:19, carbs:68, sugar:61},
-  {id:17, name:"和風ガパオ、コーンバターライス", calories:483, protein:17, fat:18, carbs:67, sugar:60},
-  {id:18, name:"白身魚のムニエル風、たけのこと蓮根のまぜご飯", calories:454, protein:15, fat:16, carbs:66, sugar:60},
-  {id:19, name:"柚子胡椒だれ豚しゃぶ、生姜鶏そぼろまぜご飯", calories:433, protein:18, fat:12, carbs:67, sugar:60},
-  {id:20, name:"月見スパイスキーマカレー、枝豆ご飯", calories:441, protein:17, fat:13, carbs:68, sugar:60},
-  {id:21, name:"トマトチーズハンバーグ、枝豆バター醤油ご飯", calories:555, protein:21, fat:22, carbs:72, sugar:64},
-  {id:22, name:"デミグラスハンバーグ、焼きとうもろこしご飯", calories:526, protein:18, fat:23, carbs:65, sugar:58},
-  {id:23, name:"青椒肉絲、きのこと根菜のまぜご飯", calories:452, protein:16, fat:17, carbs:62, sugar:56},
-  {id:26, name:"生姜香る鶏そぼろ、きのこと根菜のまぜご飯", calories:442, protein:15, fat:15, carbs:65, sugar:59},
-  {id:27, name:"牛肉オイスター炒め、さつまいもと牛蒡のまぜご飯", calories:430, protein:15, fat:16, carbs:60, sugar:53},
-  {id:28, name:"ガリバタチキン、さつまいもと牛蒡のまぜご飯", calories:556, protein:20, fat:25, carbs:66, sugar:59},
-  {id:29, name:"スパイシータコライス、蓮根のバターご飯", calories:466, protein:14, fat:19, carbs:63, sugar:57},
-  {id:30, name:"ピリ辛ビビンバ、枝豆のまぜご飯", calories:515, protein:21, fat:23, carbs:60, sugar:52},
-  {id:31, name:"塩麹ケイジャンチキン、ジャンバラヤ風まぜご飯", calories:454, protein:24, fat:17, carbs:55, sugar:48},
-  {id:33, name:"山椒香る四川風麻婆豆腐、きのこと根菜のまぜご飯", calories:491, protein:18, fat:20, carbs:63, sugar:57},
-  {id:34, name:"グリーンキーマカレー、焼きとうもろこしご飯", calories:519, protein:13, fat:22, carbs:71, sugar:63},
-  {id:36, name:"揚げ豚と豆鼓の回鍋肉風、干しえびとごまの中華風まぜご飯", calories:488, protein:16, fat:20, carbs:64, sugar:58},
-  {id:37, name:"カレーハンバーグ、コーンバターライス", calories:526, protein:18, fat:20, carbs:73, sugar:64},
-  {id:47, name:"黒酢酢豚、枝豆と人参のまぜご飯", calories:467, protein:15, fat:19, carbs:63, sugar:56},
-  {id:1, name:"山椒香るぶりの塩焼き、生姜鶏そぼろまぜご飯", calories:455, protein:23, fat:14, carbs:63, sugar:56},
-  {id:2, name:"トマト生姜焼き、枝豆と干しえびのまぜご飯", calories:454, protein:24, fat:17, carbs:55, sugar:47},
-  {id:3, name:"ギョーザ、枝豆と干しえびのまぜご飯", calories:464, protein:24, fat:18, carbs:55, sugar:48},
-  {id:4, name:"若鶏の香ばし醤油焼き、鮭ときのこのまぜご飯", calories:469, protein:20, fat:16, carbs:66, sugar:57},
-  {id:8, name:"香味だれ油淋鶏と彩り野菜、たけのこと蓮根のまぜご飯", calories:533, protein:19, fat:25, carbs:61, sugar:55},
-  {id:9, name:"タルタルチキン南蛮、生姜鶏そぼろまぜご飯", calories:465, protein:17, fat:20, carbs:57, sugar:51},
-  {id:10, name:"揚げ海老タルタル、枝豆と干しえびのまぜご飯", calories:416, protein:17, fat:18, carbs:50, sugar:43},
-  {id:11, name:"甘辛海老チリ、オムライス風まぜご飯", calories:469, protein:14, fat:18, carbs:66, sugar:60},
-  {id:13, name:"アボカドタルタル海老カツ、生姜と枝豆のまぜご飯", calories:541, protein:13, fat:25, carbs:70, sugar:62},
-  {id:15, name:"梅香る豚しゃぶ、わかめとたけのこのまぜご飯", calories:409, protein:18, fat:13, carbs:58, sugar:52},
-  {id:24, name:"磯辺七味から揚げ、根菜の中華風まぜご飯", calories:454, protein:22, fat:14, carbs:63, sugar:57},
-  {id:25, name:"白身魚タルタル、枝豆と干しえびのまぜご飯", calories:565, protein:18, fat:29, carbs:61, sugar:55},
-  {id:32, name:"照り焼きチキンマヨ風ソース、鶏そぼろまぜご飯", calories:473, protein:24, fat:17, carbs:59, sugar:53},
-  {id:35, name:"ホーリーバジル香るガパオ、枝豆と生姜のまぜご飯", calories:428, protein:18, fat:12, carbs:66, sugar:58},
-  {id:42, name:"ネギ塩竜田揚げ、たけのこと蓮根のまぜご飯", calories:488, protein:19, fat:20, carbs:61, sugar:55},
-  {id:43, name:"チーズ風味ヤンニョムチキン、人参とたけのこのまぜご飯", calories:463, protein:18, fat:18, carbs:60, sugar:55},
-  {id:53, name:"麻辣キーマカレー、干しえびのガーリックライス", calories:512, protein:13, fat:24, carbs:65, sugar:57},
-  {id:63, name:"トムヤムクン風味から揚げ、たけのこと蓮根のまぜご飯", calories:500, protein:23, fat:19, carbs:63, sugar:57},
-];
-
-function applyAete(item, mealKey) {
-  const entry = {
-    input: `あえて、No.${item.id} ${item.name}`,
-    meals: [{name: item.name, calories: item.calories, fat: item.fat, carbs: item.carbs, protein: item.protein, amount: '1食'}],
-    total: {calories: item.calories, fat: item.fat, carbs: item.carbs, protein: item.protein},
-    advice: `あえて、の栄養バランスの良いお弁当です。糖質${item.sugar||item.carbs}g・タンパク質${item.protein}gで1日の目標の約1/3をカバーします。`,
-    score: 8,
-    id: Date.now()
-  };
-  mealData[mealKey].push(entry);
-  renderAll();
-  closeAeteModal();
-}
-
-let aeteSearch = '';
-function openAeteModal(mealKey) {
-  document.getElementById('aete-meal-key').value = mealKey;
-  aeteSearch = '';
-  document.getElementById('aete-search').value = '';
-  renderAeteList();
-  document.getElementById('aete-modal').style.display = 'flex';
-}
-function closeAeteModal() { document.getElementById('aete-modal').style.display = 'none'; }
-function renderAeteList() {
-  const key = document.getElementById('aete-meal-key').value;
-  const q = aeteSearch.toLowerCase();
-  const filtered = q ? AETE_DB.filter(i => i.name.toLowerCase().includes(q)) : AETE_DB;
-  const list = document.getElementById('aete-list');
-  list.innerHTML = filtered.map(item => `
-    <div onclick="applyAete(AETE_DB.find(x=>x.id===${item.id}), document.getElementById('aete-meal-key').value)"
-      style="padding:12px 14px;border-bottom:1px solid #0f0f1c;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;color:#ccc;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No.${item.id} ${item.name}</div>
-        <div style="font-size:11px;color:#555;display:flex;gap:10px">
-          <span style="color:#f59e0b">${item.calories}kcal</span>
-          <span>脂${item.fat}g</span>
-          <span>糖${item.sugar||item.carbs}g</span>
-          <span>P${item.protein}g</span>
-        </div>
-      </div>
-      <span style="color:#818cf8;font-size:18px;margin-left:10px">+</span>
-    </div>
-  `).join('') || '<div style="padding:20px;text-align:center;color:#555;font-size:13px">見つかりません</div>';
-}
-
-// Password for weight tab
-let weightUnlocked = false;
-
-function openPwModal() {
-  document.getElementById('pw-input').value = '';
-  document.getElementById('pw-error').style.display = 'none';
-  document.getElementById('pw-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('pw-input').focus(), 100);
-}
-function closePwModal() {
-  document.getElementById('pw-modal').style.display = 'none';
-}
-function checkPw() {
-  const entered = document.getElementById('pw-input').value;
-  if (entered === weightPw) {
-    weightUnlocked = true;
-    closePwModal();
-    showTab('weight');
-  } else {
-    document.getElementById('pw-error').style.display = 'block';
-    document.getElementById('pw-input').value = '';
-    document.getElementById('pw-input').focus();
-  }
-}
-
-function addQuick(mealKey, name, cal, fat, carbs, protein) {
-  const entry = {
-    input: name,
-    meals: [{name: name, calories: cal, fat: fat, carbs: carbs, protein: protein, amount: '1食分'}],
-    total: {calories: cal, fat: fat, carbs: carbs, protein: protein},
-    advice: '',
-    score: 7,
-    id: Date.now()
-  };
-  mealData[mealKey].push(entry);
-  renderAll();
-}
-
+// ── Start ──────────────────────────────────────────────────────────────────
 function startApp() {
-  document.getElementById('date-label').textContent =
-    new Date().toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
-  renderAll();
+document.getElementById(‘date-lbl’).textContent =
+new Date().toLocaleDateString(‘ja-JP’,{month:‘long’,day:‘numeric’,weekday:‘short’});
+renderAll();
 }
 
-// Init
-loadState();
+load();
 if (apiKey) {
-  document.getElementById('api-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  startApp();
+document.getElementById(‘api-screen’).style.display = ‘none’;
+document.getElementById(‘app’).style.display = ‘block’;
+startApp();
 }
 </script>
+
 </body>
 </html>
