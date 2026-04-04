@@ -69,12 +69,19 @@ function updateDateLabel() {
   const d = new Date(currentDate + 'T00:00:00');
   const label = d.toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
   const isToday = currentDate === today;
-  document.getElementById('date-lbl').textContent = isToday ? label : label;
+  document.getElementById('date-lbl').textContent = label;
   const nextBtn = document.getElementById('date-next');
+  const prevBtn = document.getElementById('date-prev');
   if (nextBtn) {
-    nextBtn.style.opacity = isToday ? '0.2' : '1';
-    nextBtn.style.pointerEvents = isToday ? 'none' : 'auto';
-    nextBtn.style.cursor = isToday ? 'default' : 'pointer';
+    if (isToday) {
+      nextBtn.setAttribute('disabled', 'true');
+      nextBtn.style.opacity = '0.2';
+      nextBtn.style.pointerEvents = 'none';
+    } else {
+      nextBtn.removeAttribute('disabled');
+      nextBtn.style.opacity = '1';
+      nextBtn.style.pointerEvents = 'auto';
+    }
   }
 }
 function save(key, val) { try { localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val)); } catch(e) {} }
