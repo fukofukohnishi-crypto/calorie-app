@@ -27,7 +27,7 @@ let openSecs = {morning:true, lunch:true, snack:true, dinner:true};
 let aeteMealKey = 'lunch';
 let habits = []; // [{id, name}]
 let habitChecks = {}; // {date: {id: bool}}
-let currentDate = new Date().toISOString().slice(0,10);
+let currentDate = '';
 
 //
 function load() {
@@ -476,7 +476,13 @@ function applyAete(id) {
 }
 
 //
-function todayStr() { return new Date().toISOString().slice(0,10); }
+function todayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + day;
+}
 
 function saveWeight() {
   const v = parseFloat(document.getElementById('w-input').value);
@@ -680,6 +686,7 @@ function renderSummary() {
 }
 
 function startApp() {
+  currentDate = todayStr();
   loadMealData();
   updateDateLabel();
   renderAll();
