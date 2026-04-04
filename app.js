@@ -25,8 +25,9 @@ let weightData = {};
 let favorites = [];
 let openSecs = {morning:true, lunch:true, snack:true, dinner:true};
 let aeteMealKey = 'lunch';
-let habits = []; // [{id, name}]
-let habitChecks = {}; // {date: {id: bool}}
+let habits = [];
+let habitChecks = {};
+let goalWeight = 0;
 let currentDate = '';
 
 //
@@ -38,6 +39,7 @@ function load() {
     weightPw    = localStorage.getItem('c_weightpw') || '';
     weightData  = JSON.parse(localStorage.getItem('c_weight') || '{}');
     favorites   = JSON.parse(localStorage.getItem('c_favs') || '[]');
+    goalWeight  = parseFloat(localStorage.getItem('c_goalweight')) || 0;
     habits      = JSON.parse(localStorage.getItem('c_habits') || '[]');
     habitChecks = JSON.parse(localStorage.getItem('c_habit_checks') || '{}');
   } catch(e) {}
@@ -108,18 +110,22 @@ function openGoalModal() {
   document.getElementById('goal-cal-input').value = goalCal;
   document.getElementById('goal-rice-input').value = goalRice;
   document.getElementById('goal-pw-input').value = weightPw;
+  document.getElementById('goal-weight-input').value = goalWeight || '';
   document.getElementById('goal-modal').style.display = 'flex';
 }
 function saveGoalModal() {
   const c = parseInt(document.getElementById('goal-cal-input').value);
   const r = parseInt(document.getElementById('goal-rice-input').value);
   const pw = document.getElementById('goal-pw-input').value;
+  const gw = parseFloat(document.getElementById('goal-weight-input').value);
   if (c > 0) { goalCal = c; save('c_goalcal', c); }
   if (r > 0) { goalRice = r; save('c_goalrice', r); }
+  if (gw > 0) { goalWeight = gw; save('c_goalweight', gw); }
   weightPw = pw;
   weightUnlocked = false;
   save('c_weightpw', pw);
   renderAll();
+  renderWeightSection();
   closeModal('goal-modal');
 }
 
@@ -157,6 +163,7 @@ function showTab(tab) {
     document.getElementById('tab-weight').className = 'tab-btn';
     document.getElementById('tab-habit').className = 'tab-btn active';
     renderHabits();
+    renderMonthlyReport();
     return;
   }
   // food tab
@@ -539,6 +546,14 @@ function drawChart() {
   ctx.fillStyle='rgba(129,140,248,0.12)';ctx.fill();
   ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
   ctx.strokeStyle='#818cf8';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+  // Goal weight line
+  if (goalWeight && goalWeight >= minV && goalWeight <= maxV) {
+    const gy = yS(goalWeight);
+    ctx.beginPath();ctx.setLineDash([4,4]);ctx.moveTo(pad.l,gy);ctx.lineTo(W-pad.r,gy);
+    ctx.strokeStyle='#10b981';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#10b981';ctx.font='9px sans-serif';ctx.textAlign='left';
+    ctx.fillText('目標 '+goalWeight+'kg',pad.l+2,gy-3);
+  }
   const today=todayStr();
   vals.forEach((v,i)=>{if(!v)return;const isT=days[i]===today;ctx.beginPath();ctx.arc(xS(i),yS(v),isT?5:3,0,Math.PI*2);ctx.fillStyle='#818cf8';ctx.fill();if(isT){ctx.beginPath();ctx.arc(xS(i),yS(v),5,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();}});
 }
@@ -566,6 +581,98 @@ function toggleHabit(id) {
   habitChecks[currentDate][id] = !habitChecks[currentDate][id];
   save('c_habit_checks', habitChecks);
   renderHabits();
+}
+
+function renderMonthlyReport() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,'0');
+  const daysInMonth = new Date(y, now.getMonth()+1, 0).getDate();
+  const today = todayStr();
+
+  // Calorie achievement
+  let calDays = 0, calTotal = 0;
+  for (let d = 1; d <= now.getDate(); d++) {
+    const ds = y+'-'+m+'-'+String(d).padStart(2,'0');
+    const saved = localStorage.getItem('c_meals_'+ds);
+    if (saved) {
+      const md = JSON.parse(saved);
+      const cal = ['morning','lunch','snack','dinner'].reduce((s,k)=>
+        s+(md[k]||[]).reduce((a,e)=>a+(e.total?.calories||0),0),0);
+      if (cal > 0) { calTotal += cal; calDays++; }
+      if (cal > 0 && cal <= goalCal) calDays > 0 && calDays++;
+    }
+  }
+
+  // Calorie days under goal
+  let underGoalDays = 0, recordedDays = 0;
+  for (let d = 1; d <= now.getDate(); d++) {
+    const ds = y+'-'+m+'-'+String(d).padStart(2,'0');
+    const saved = localStorage.getItem('c_meals_'+ds);
+    if (saved) {
+      const md = JSON.parse(saved);
+      const cal = ['morning','lunch','snack','dinner'].reduce((s,k)=>
+        s+(md[k]||[]).reduce((a,e)=>a+(e.total?.calories||0),0),0);
+      if (cal > 0) {
+        recordedDays++;
+        if (cal <= goalCal) underGoalDays++;
+      }
+    }
+  }
+
+  // Habit achievement this month
+  let habitTotalChecks = 0, habitMaxChecks = 0;
+  for (let d = 1; d <= now.getDate(); d++) {
+    const ds = y+'-'+m+'-'+String(d).padStart(2,'0');
+    const checks = habitChecks[ds] || {};
+    habitMaxChecks += habits.length;
+    habitTotalChecks += habits.filter(h => checks[h.id]).length;
+  }
+  const habitPct = habitMaxChecks > 0 ? Math.round(habitTotalChecks/habitMaxChecks*100) : 0;
+  const calPct = recordedDays > 0 ? Math.round(underGoalDays/recordedDays*100) : 0;
+
+  const container = document.getElementById('monthly-report');
+  if (!container) return;
+  container.innerHTML = \`
+    <div style="font-size:10px;color:#555;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">\${y}年\${parseInt(m)}月の記録</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:#0f0f1a;border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:10px;color:#555;margin-bottom:6px">カロリー達成日</div>
+        <div style="font-size:28px;font-weight:700;color:#10b981">\${underGoalDays}</div>
+        <div style="font-size:11px;color:#333">/ \${recordedDays}日記録</div>
+        <div style="margin-top:8px;height:5px;background:#1a1a2e;border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:\${calPct}%;background:#10b981;border-radius:99px"></div>
+        </div>
+        <div style="font-size:10px;color:#10b981;margin-top:4px">\${calPct}%</div>
+      </div>
+      <div style="background:#0f0f1a;border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:10px;color:#555;margin-bottom:6px">習慣達成率</div>
+        <div style="font-size:28px;font-weight:700;color:#818cf8">\${habitPct}%</div>
+        <div style="font-size:11px;color:#333">\${habitTotalChecks}/\${habitMaxChecks}チェック</div>
+        <div style="margin-top:8px;height:5px;background:#1a1a2e;border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:\${habitPct}%;background:#818cf8;border-radius:99px"></div>
+        </div>
+        <div style="font-size:10px;color:#818cf8;margin-top:4px">\${now.getDate()}日経過</div>
+      </div>
+    </div>
+    <div style="background:#0f0f1a;border-radius:12px;padding:12px">
+      <div style="font-size:10px;color:#555;margin-bottom:8px">今月の日別カロリー達成</div>
+      <div style="display:flex;gap:3px;align-items:flex-end;height:40px">
+        \${Array.from({length:now.getDate()},(_,i)=>{
+          const ds = y+'-'+m+'-'+String(i+1).padStart(2,'0');
+          const saved = localStorage.getItem('c_meals_'+ds);
+          if (!saved) return \`<div style="flex:1;background:#1a1a2e;border-radius:2px;height:4px" title="\${i+1}日"></div>\`;
+          const md = JSON.parse(saved);
+          const cal = ['morning','lunch','snack','dinner'].reduce((s,k)=>s+(md[k]||[]).reduce((a,e)=>a+(e.total?.calories||0),0),0);
+          if (!cal) return \`<div style="flex:1;background:#1a1a2e;border-radius:2px;height:4px"></div>\`;
+          const h = Math.min(40, Math.round(cal/goalCal*40));
+          const color = cal <= goalCal ? '#10b981' : '#ef4444';
+          return \`<div style="flex:1;background:\${color};border-radius:2px;height:\${h}px" title="\${i+1}日 \${cal}kcal"></div>\`;
+        }).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:#333;margin-top:4px"><span>1日</span><span>\${now.getDate()}日</span></div>
+    </div>
+  \`;
 }
 
 function renderHabits() {
