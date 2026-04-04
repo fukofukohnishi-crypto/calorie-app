@@ -69,9 +69,13 @@ function updateDateLabel() {
   const d = new Date(currentDate + 'T00:00:00');
   const label = d.toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
   const isToday = currentDate === today;
-  document.getElementById('date-lbl').textContent = isToday ? label : label + ' (過去)';
-  document.getElementById('date-next').style.opacity = isToday ? '0.2' : '1';
-  document.getElementById('date-next').style.pointerEvents = isToday ? 'none' : 'auto';
+  document.getElementById('date-lbl').textContent = isToday ? label : label;
+  const nextBtn = document.getElementById('date-next');
+  if (nextBtn) {
+    nextBtn.style.opacity = isToday ? '0.2' : '1';
+    nextBtn.style.pointerEvents = isToday ? 'none' : 'auto';
+    nextBtn.style.cursor = isToday ? 'default' : 'pointer';
+  }
 }
 function save(key, val) { try { localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val)); } catch(e) {} }
 
@@ -289,7 +293,7 @@ function renderSections() {
           <button class="fav-star" onclick="event.stopPropagation();toggleFav('${m.key}',${i})" title="お気に入り">${favorites.some(f=>f.input===e.input)?'⭐':'☆'}</button>
           <button class="entry-del" onclick="event.stopPropagation();deleteEntry('${m.key}',${i})">✕</button>
         </div>
-        <div class="entry-detail" id="det-${m.key}-${i}">
+        <div class="entry-detail" id="det-${m.key}-${i}" style="display:${e.advice ? 'block' : 'none'}">
           ${(e.meals||[]).map(f=>`<div class="entry-row"><span>${f.name} <span style="color:#333">(${f.amount})</span></span><span>${f.calories} kcal</span></div>`).join('')}
           ${e.advice ? `<div class="advice-box">💬 ${e.advice}</div>` : ''}
         </div>
@@ -355,6 +359,7 @@ function renderAll() {
   renderSeg();
   renderSections();
   renderRice();
+  renderSummary();
 }
 
 //
@@ -593,6 +598,73 @@ function renderHabits() {
       </div>`;
     }).join('')}
   `;
+}
+
+function renderSummary() {
+  const existing = document.getElementById('daily-summary');
+  if (existing) existing.remove();
+
+  const all = getTotals();
+  if (all.calories === 0) return;
+
+  // Check if all 4 meals have entries
+  const allMealsDone = MEALS.every(m => (mealData[m.key]||[]).length > 0);
+
+  // Always show summary if any data exists, highlight if complete
+  const remCal = goalCal - all.calories;
+  const over = all.calories > goalCal;
+  const pfc_p = Math.round(all.protein * 4 / all.calories * 100);
+  const pfc_f = Math.round(all.fat * 9 / all.calories * 100);
+  const pfc_c = Math.round(all.carbs * 4 / all.calories * 100);
+
+  let grade = '';
+  let comment = '';
+  let color = '#818cf8';
+
+  if (allMealsDone) {
+    if (!over && pfc_p >= 15 && pfc_f <= 35) {
+      grade = '🏆 バランス良好！';
+      comment = `PFCバランスはP${pfc_p}%:F${pfc_f}%:C${pfc_c}%。目標カロリーも守れています。明日も続けましょう！`;
+      color = '#10b981';
+    } else if (over) {
+      grade = '⚠️ カロリー超過';
+      comment = `${all.calories - goalCal}kcal超過しました。明日は少し控えめにしましょう。`;
+      color = '#ef4444';
+    } else {
+      grade = '👍 まずまず';
+      comment = `PFCバランスはP${pfc_p}%:F${pfc_f}%:C${pfc_c}%。タンパク質を意識するとさらに良くなります。`;
+      color = '#f59e0b';
+    }
+  } else {
+    comment = `現在 ${all.calories} kcal摂取。残り ${Math.max(0, remCal)} kcal。全食事を記録すると総評が出ます。`;
+    color = '#555';
+  }
+
+  const div = document.createElement('div');
+  div.id = 'daily-summary';
+  div.style.cssText = `margin:10px 14px 0;background:#09090f;border:1px solid ${color}30;border-radius:14px;padding:14px`;
+  div.innerHTML = `
+    <div style="font-size:10px;color:${color};letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">📊 今日の総評${grade ? ' ' + grade : ''}</div>
+    <div style="font-size:13px;color:#ccc;line-height:1.7">${comment}</div>
+    ${allMealsDone ? `<div style="display:flex;gap:8px;margin-top:10px">
+      <div style="flex:1;background:#0f0f1a;border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:10px;color:#555;margin-bottom:2px">P</div>
+        <div style="font-size:14px;font-weight:700;color:#22d3ee">${pfc_p}%</div>
+      </div>
+      <div style="flex:1;background:#0f0f1a;border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:10px;color:#555;margin-bottom:2px">F</div>
+        <div style="font-size:14px;font-weight:700;color:#ec4899">${pfc_f}%</div>
+      </div>
+      <div style="flex:1;background:#0f0f1a;border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:10px;color:#555;margin-bottom:2px">C</div>
+        <div style="font-size:14px;font-weight:700;color:#818cf8">${pfc_c}%</div>
+      </div>
+    </div>` : ''}
+  `;
+
+  // Insert after rice-box
+  const riceBox = document.getElementById('rice-box');
+  riceBox.parentNode.insertBefore(div, riceBox.nextSibling);
 }
 
 function startApp() {
