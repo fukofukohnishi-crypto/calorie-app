@@ -94,6 +94,18 @@ input{outline:none}
 </head>
 <body>
 
+<script>
+function saveApiKey() {
+  var v = document.getElementById('api-input').value.trim();
+  if (!v) { alert('APIキーを入力してください'); return; }
+  apiKey = v;
+  try { localStorage.setItem('c_apikey', v); } catch(e) {}
+  document.getElementById('api-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  startApp();
+}
+</script>
+
 <!-- API Key Screen -->
 
 <div id="api-screen" style="position:fixed;inset:0;background:#07070f;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;z-index:100">
