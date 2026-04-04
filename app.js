@@ -54,24 +54,29 @@ function saveMealData() {
   save('c_meals_' + currentDate, mealData);
 }
 function changeDate(delta) {
-  const d = new Date(currentDate + 'T00:00:00');
+  const parts = currentDate.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
   d.setDate(d.getDate() + delta);
-  const newDate = d.toISOString().slice(0,10);
-  const today = new Date().toISOString().slice(0,10);
-  if (newDate > today) return; // can't go to future
+  const y = d.getFullYear();
+  const mo = String(d.getMonth()+1).padStart(2,'0');
+  const da = String(d.getDate()).padStart(2,'0');
+  const newDate = y+'-'+mo+'-'+da;
+  if (newDate > todayStr()) return;
   currentDate = newDate;
   loadMealData();
   updateDateLabel();
   renderAll();
 }
 function updateDateLabel() {
-  const today = new Date().toISOString().slice(0,10);
-  const d = new Date(currentDate + 'T00:00:00');
+  const today = todayStr();
+  const parts = currentDate.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
   const label = d.toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'});
   const isToday = currentDate === today;
   document.getElementById('date-lbl').textContent = label;
   const nextBtn = document.getElementById('date-next');
-  const prevBtn = document.getElementById('date-prev');
+  if (nextBtn) nextBtn.style.color = isToday ? '#2a2a3e' : '#aaa';
+  const dummy = null;
   if (nextBtn) {
     if (isToday) {
       nextBtn.setAttribute('disabled', 'true');
