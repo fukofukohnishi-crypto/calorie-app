@@ -246,11 +246,8 @@ function renderRice() {
   if (!sf.calories) { box.style.display='none'; return; }
   box.style.display = 'block';
   if ((mealData.dinner||[]).length > 0) {
-    const all = getTotals();
-    const diff = all.calories - goalCal;
-    cnt.innerHTML = diff > 100 ? `今日は <span style="color:#ef4444;font-weight:700">+${diff} kcal 超過</span>。明日は少し控えめに。`
-      : diff < -200 ? `まだ <span style="color:#10b981;font-weight:700">${Math.abs(diff)} kcal</span> 余裕あり。`
-      : `<span style="color:#10b981;font-weight:700">ほぼ目標通り！今日よく頑張りました👍</span>`;
+    // Hide rice box when summary is shown
+    box.style.display = 'none';
     return;
   }
   const totalCarbsAsRice = Math.round(sf.carbs / 37 * 100);
@@ -622,21 +619,29 @@ function renderSummary() {
   let color = '#818cf8';
 
   if (allMealsDone) {
-    if (!over && pfc_p >= 15 && pfc_f <= 35) {
-      grade = '🏆 バランス良好！';
-      comment = `PFCバランスはP${pfc_p}%:F${pfc_f}%:C${pfc_c}%。目標カロリーも守れています。明日も続けましょう！`;
+    if (!over && pfc_p >= 20 && pfc_f <= 30) {
+      grade = '🏆 完璧なバランス！';
+      comment = `素晴らしい1日でした！カロリーは目標内に収まり、PFCバランスもP${pfc_p}%・F${pfc_f}%・C${pfc_c}%と理想的です。タンパク質もしっかり摂れていて、筋肉を維持しながらダイエットできています。この調子を続けましょう！`;
       color = '#10b981';
+    } else if (!over && pfc_p >= 15) {
+      grade = '👍 よく頑張りました！';
+      comment = `カロリーは目標内に収まりました。PFCバランスはP${pfc_p}%・F${pfc_f}%・C${pfc_c}%です。タンパク質をもう少し増やすと（肉・魚・卵・豆腐など）、筋肉を維持しながらより効果的なダイエットになります。`;
+      color = '#f59e0b';
+    } else if (over && (all.calories - goalCal) <= 100) {
+      grade = '😅 惜しい！';
+      comment = `目標まであと少しでした。${all.calories - goalCal}kcalのオーバーです。夕食のおかずを少し減らすか、おやつを控えると目標に届きます。明日また頑張りましょう！`;
+      color = '#f97316';
     } else if (over) {
       grade = '⚠️ カロリー超過';
-      comment = `${all.calories - goalCal}kcal超過しました。明日は少し控えめにしましょう。`;
+      comment = `今日は目標より${all.calories - goalCal}kcal多く摂取しました。糖質が${all.carbs}gと多めです。明日はご飯の量を少し減らして、野菜やタンパク質を増やしてみましょう。1日の超過は取り戻せます！`;
       color = '#ef4444';
     } else {
-      grade = '👍 まずまず';
-      comment = `PFCバランスはP${pfc_p}%:F${pfc_f}%:C${pfc_c}%。タンパク質を意識するとさらに良くなります。`;
-      color = '#f59e0b';
+      grade = '🌱 まずまず';
+      comment = `カロリーは目標内です。PFCバランスはP${pfc_p}%・F${pfc_f}%・C${pfc_c}%。タンパク質を意識して摂ると体型維持に効果的です。引き続き頑張りましょう！`;
+      color = '#818cf8';
     }
   } else {
-    comment = `現在 ${all.calories} kcal摂取。残り ${Math.max(0, remCal)} kcal。全食事を記録すると総評が出ます。`;
+    comment = `現在 ${all.calories} kcal摂取中。残り ${Math.max(0, remCal)} kcal。全食事を記録すると詳しい総評が表示されます。`;
     color = '#555';
   }
 
