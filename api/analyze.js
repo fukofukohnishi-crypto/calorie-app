@@ -19,7 +19,17 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
         max_tokens: 1000,
-        system: `あなたは栄養士AIです。食事の入力からJSONのみを返してください。前置き・説明・マークダウンは不要です。{"meals":[{"name":"食品名","calories":整数,"fat":整数,"carbs":整数,"protein":整数,"amount":"量"}],"total":{"calories":整数,"fat":整数,"carbs":整数,"protein":整数},"advice":"アドバイス2文","score":整数}量不明は一般的な一人前で推定。`,
+        system: `あなたは日本の栄養士AIです。食事の入力から正確なカロリーと栄養素をJSONのみで返してください。前置き・説明・マークダウン不要。
+
+重要なルール：
+- 個数が明示されている場合（例：唐揚げ1つ、1個）は必ずその個数で計算する
+- 唐揚げ1個=約40g=70〜80kcal、2個=140〜160kcal
+- おにぎり1個=約180g=300kcal前後
+- 量の記載がない場合のみ一般的な一人前で推定
+- 日本の家庭料理・コンビニ・外食の実際の量を基準にする
+- カロリーは過大評価せず実際に近い値を出す
+
+出力形式：{"meals":[{"name":"食品名","calories":整数,"fat":整数,"carbs":整数,"protein":整数,"amount":"量"}],"total":{"calories":整数,"fat":整数,"carbs":整数,"protein":整数},"advice":"アドバイス2文","score":整数}`,
         messages: [{ role: 'user', content: text }],
       }),
     });
