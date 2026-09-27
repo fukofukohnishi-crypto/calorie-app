@@ -26,8 +26,9 @@ input{outline:none}
 .header{padding:24px 20px 20px;border-bottom:1px solid #0f0f1c;background:linear-gradient(180deg,#0d0d1a,#07070f)}
 .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .date-lbl{font-size:13px;color:#888;letter-spacing:1px}
-.hbtns{display:flex;gap:6px}
-.hbtn{background:none;border:1px solid #1a1a2e;border-radius:8px;padding:5px 10px;color:#555;font-size:11px;cursor:pointer}
+.hbtns{display:flex;gap:4px}
+.hbtn{background:none;border:1px solid #1a1a2e;border-radius:8px;padding:5px 7px;color:#555;font-size:11px;cursor:pointer;white-space:nowrap}
+#pair-hbtn{max-width:76px;overflow:hidden;text-overflow:ellipsis}
 .gauge-wrap{position:relative;width:176px;height:176px;margin:0 auto}
 .gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .gauge-cal{font-size:38px;font-weight:700;line-height:1}
@@ -99,6 +100,16 @@ input{outline:none}
 .habit-name{flex:1;font-size:14px;color:#ccc}
 .habit-name.done{color:#444;text-decoration:line-through}
 .habit-del{background:none;border:none;color:#2a2a3e;cursor:pointer;font-size:14px;padding:2px 6px}
+.share-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;opacity:.35}
+.share-btn.sent{opacity:1}
+.pair-toggle{background:#09090f;border:1px solid #1a1a2e;border-radius:9px;padding:8px 10px;color:#555;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.pair-toggle.on{border-color:#f472b680;color:#f472b6;background:#1a0a14}
+.from-tag{color:#f472b6}
+.pair-btn{width:100%;border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px}
+.pair-note{font-size:11px;color:#555;line-height:1.7;margin-top:8px}
+.pair-code{font-size:26px;font-family:monospace;letter-spacing:4px;color:#f472b6;text-align:center;background:#07070f;border:1px solid #1a1a2e;border-radius:10px;padding:12px;user-select:all}
+.summary-share{width:100%;margin-top:10px;background:#0f0f1a;border:1px solid #1a1a2e;border-radius:10px;padding:10px;color:#aaa;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1a1a2e;color:#e0e0e0;font-size:13px;padding:10px 16px;border-radius:12px;z-index:200;max-width:calc(100% - 32px);box-shadow:0 4px 20px rgba(0,0,0,.5);display:none;line-height:1.5}
 </style>
 </head>
 <body>
@@ -168,16 +179,23 @@ input{outline:none}
   </div>
 </div>
 
+<div id="pair-modal" class="modal-bg" style="display:none">
+  <div class="modal" id="pair-modal-body"></div>
+</div>
+
+<div id="toast"></div>
+
 <!-- App -->
 <div id="app" style="display:none">
   <div class="header">
     <div class="top-bar">
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:4px">
         <button id="date-prev" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;padding:0 2px" onclick="changeDate(-1)">‹</button>
-        <div class="date-lbl" id="date-lbl" style="min-width:110px;text-align:center"></div>
+        <div class="date-lbl" id="date-lbl" style="min-width:92px;text-align:center;white-space:nowrap"></div>
         <button id="date-next" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;padding:0 2px" onclick="changeDate(1)">›</button>
       </div>
       <div class="hbtns">
+        <button class="hbtn" id="pair-hbtn" onclick="openPairModal()">👫 ペア</button>
         <button class="hbtn" onclick="openGoalModal()">🎯 目標</button>
         <button class="hbtn" onclick="openKeyModal()">⚙️ APIキー</button>
       </div>
@@ -359,6 +377,11 @@ let habits = [];
 let habitChecks = {};
 let goalWeight = 0;
 let currentDate = '';
+let pair = null; // {code, role:'a'|'b', name, partnerName}
+let shareOn = {morning:false, lunch:false, snack:false, dinner:true};
+let lastGrade = '';
+let syncing = false;
+let syncTimer = null;
 
 //
 function load() {
@@ -372,6 +395,8 @@ function load() {
     goalWeight  = parseFloat(localStorage.getItem('c_goalweight')) || 0;
     habits      = JSON.parse(localStorage.getItem('c_habits') || '[]');
     habitChecks = JSON.parse(localStorage.getItem('c_habit_checks') || '{}');
+    pair        = JSON.parse(localStorage.getItem('c_pair') || 'null');
+    shareOn     = {...shareOn, ...JSON.parse(localStorage.getItem('c_share_on') || '{}')};
   } catch(e) {}
 }
 function loadMealData() {
@@ -606,6 +631,8 @@ function renderRice() {
 //
 function renderSections() {
   const sec = document.getElementById('sections');
+  const drafts = {};
+  MEALS.forEach(m => { const ta = document.getElementById(`ta-${m.key}`); if (ta) drafts[m.key] = ta.value; });
   sec.innerHTML = '';
   MEALS.forEach(m => {
     const entries = mealData[m.key] || [];
@@ -622,26 +649,28 @@ function renderSections() {
       <div class="entry">
         <div class="entry-hdr" onclick="toggleEntry('${m.key}',${i})">
           <div class="entry-text">
-            <div class="entry-name">${e.input}</div>
+            <div class="entry-name">${esc(e.input)}</div>
             <div class="entry-nums">
+              ${e.from ? `<span class="from-tag">💌 ${esc(e.from)}</span>` : ''}
               <span class="entry-kcal">${e.total?.calories||0} kcal</span>
               <span>脂 ${e.total?.fat||0}g</span>
               <span>糖 ${e.total?.carbs||0}g</span>
               <span>P ${e.total?.protein||0}g</span>
             </div>
           </div>
+          ${pair && !e.from ? `<button class="share-btn ${e.sharedAt?'sent':''}" onclick="event.stopPropagation();shareEntry('${m.key}',${i})" title="パートナーにも記録">👫</button>` : ''}
           <button class="fav-star" onclick="event.stopPropagation();toggleFav('${m.key}',${i})" title="お気に入り">${favorites.some(f=>f.input===e.input)?'⭐':'☆'}</button>
           <button class="entry-del" onclick="event.stopPropagation();deleteEntry('${m.key}',${i})">✕</button>
         </div>
         <div class="entry-detail" id="det-${m.key}-${i}" style="display:${e.advice ? 'block' : 'none'}">
-          ${(e.meals||[]).map(f=>`<div class="entry-row"><span>${f.name} <span style="color:#333">(${f.amount})</span></span><span>${f.calories} kcal</span></div>`).join('')}
-          ${e.advice ? `<div class="advice-box">💬 ${e.advice}</div>` : ''}
+          ${(e.meals||[]).map(f=>`<div class="entry-row"><span>${esc(f.name)} <span style="color:#333">(${esc(f.amount)})</span></span><span>${f.calories} kcal</span></div>`).join('')}
+          ${e.advice ? `<div class="advice-box">💬 ${esc(e.advice)}</div>` : ''}
         </div>
       </div>`).join('');
 
     const favsHTML = myFavs.length ? `<div class="fav-chips">${myFavs.map((f,fi)=>`
       <div class="fav-chip" onclick="applyFav('${m.key}',${favorites.indexOf(f)})">
-        ⭐ ${f.input.length>12?f.input.slice(0,12)+'…':f.input}
+        ⭐ ${esc(f.input.length>12?f.input.slice(0,12)+'…':f.input)}
         <span class="fav-chip-kcal">${f.total?.calories||0}kcal</span>
         <span class="fav-chip-del" onclick="event.stopPropagation();deleteFav(${favorites.indexOf(f)})">✕</span>
       </div>`).join('')}</div>` : '';
@@ -674,6 +703,7 @@ function renderSections() {
           <div class="input-footer">
             <span class="input-hint">Enterで送信</span>
             <div class="input-btns">
+              ${pair ? `<button class="pair-toggle ${shareOn[m.key]?'on':''}" onclick="toggleShare('${m.key}',this)" title="オンにすると相手にも記録されます">👫 2人分</button>` : ''}
               ${aeteBtnHTML}
               <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
             </div>
@@ -685,6 +715,7 @@ function renderSections() {
 
     if (isOpen) {
       const ta = document.getElementById(`ta-${m.key}`);
+      if (ta && drafts[m.key]) ta.value = drafts[m.key];
       if (ta) ta.addEventListener('keydown', ev => {
         if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); analyze(m.key); }
       });
@@ -722,21 +753,18 @@ function toggleFav(key, i) {
 function applyFav(key, fi) {
   const f = favorites[fi];
   if (!f) return;
-  mealData[key].push({...f, id: Date.now()});
-  saveMealData();
-  renderAll();
+  const {mealKey, sharedAt, from, ...rest} = f;
+  addEntry(key, {...rest, id: Date.now()});
 }
 function deleteFav(fi) { favorites.splice(fi, 1); save('c_favs', favorites); renderAll(); }
 
 function addQuick(key, name, cal, fat, carbs, protein) {
-  mealData[key].push({
+  addEntry(key, {
     input: name,
     meals: [{name, calories:cal, fat, carbs, protein, amount:'1食分'}],
     total: {calories:cal, fat, carbs, protein},
     advice: '', score: 7, id: Date.now()
   });
-  saveMealData();
-  renderAll();
 }
 
 async function analyze(mealKey) {
@@ -757,10 +785,8 @@ async function analyze(mealKey) {
     });
     const parsed = await res.json();
     if (!res.ok) throw new Error(parsed.error || 'HTTP ' + res.status);
-    mealData[mealKey].push({input:text, ...parsed, id:Date.now()});
-    saveMealData();
     ta.value = '';
-    renderAll();
+    addEntry(mealKey, {input:text, ...parsed, id:Date.now()});
   } catch(e) {
     err.textContent = '⚠️ ' + e.message;
     err.style.display = 'block';
@@ -798,16 +824,14 @@ function renderAeteList() {
 function applyAete(id) {
   const item = AETE_DB.find(x=>x.id===id);
   if (!item) return;
-  mealData[aeteMealKey].push({
+  closeModal('aete-modal');
+  addEntry(aeteMealKey, {
     input: `あえて、No.${item.id} ${item.name}`,
     meals: [{name:item.name, calories:item.calories, fat:item.fat, carbs:item.carbs, protein:item.protein, amount:'1食'}],
     total: {calories:item.calories, fat:item.fat, carbs:item.carbs, protein:item.protein},
     advice: `糖質${item.sugar||item.carbs}g・タンパク質${item.protein}gで栄養バランスの良いお弁当です。`,
     score: 8, id: Date.now()
   });
-  saveMealData();
-  renderAll();
-  closeModal('aete-modal');
 }
 
 //
@@ -1059,6 +1083,7 @@ function renderSummary() {
     color = '#555';
   }
 
+  lastGrade = grade;
   const div = document.createElement('div');
   div.id = 'daily-summary';
   div.style.cssText = `margin:10px 14px 0;background:#09090f;border:1px solid ${color}30;border-radius:14px;padding:14px`;
@@ -1079,6 +1104,7 @@ function renderSummary() {
         <div style="font-size:14px;font-weight:700;color:#818cf8">${pfc_c}%</div>
       </div>
     </div>` : ''}
+    <button class="summary-share" onclick="shareSummary()">📤 今日のまとめを送る</button>
   `;
 
   // Insert after rice-box
@@ -1090,7 +1116,240 @@ function startApp() {
   currentDate = todayStr();
   loadMealData();
   updateDateLabel();
+  updatePairBtn();
   renderAll();
+  syncPair();
+  if (!syncTimer) {
+    syncTimer = setInterval(() => { if (document.visibilityState === 'visible') syncPair(); }, 60000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncPair(); });
+  }
+}
+
+//
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(showToast.t);
+  showToast.t = setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+async function shareText(text) {
+  if (navigator.share) {
+    try { await navigator.share({text}); return; }
+    catch(e) { if (e.name === 'AbortError') return; }
+  }
+  window.open('https://line.me/R/share?text=' + encodeURIComponent(text), '_blank');
+}
+
+function addEntry(key, entry) {
+  mealData[key].push(entry);
+  saveMealData();
+  renderAll();
+  if (pair && shareOn[key]) sendToPartner(key, entry, currentDate);
+}
+
+function shareSummary() {
+  const t = getTotals();
+  const over = t.calories > goalCal;
+  const lines = [`📊 ${document.getElementById('date-lbl').textContent}の記録${lastGrade ? ' ' + lastGrade : ''}`];
+  MEALS.forEach(m => {
+    const cal = (mealData[m.key]||[]).reduce((s,e)=>s+(e.total?.calories||0),0);
+    const names = (mealData[m.key]||[]).map(e => e.input).join('、');
+    lines.push(`${m.emoji}${m.label} ${cal ? cal + 'kcal' : '—'}${names ? '（' + (names.length > 30 ? names.slice(0,30) + '…' : names) + '）' : ''}`);
+  });
+  lines.push(`合計 ${t.calories} / ${goalCal} kcal（${over ? (t.calories - goalCal) + 'kcal 超過' : '残り ' + (goalCal - t.calories) + 'kcal'}）`);
+  lines.push(`P ${t.protein}g・F ${t.fat}g・C ${t.carbs}g`);
+  shareText(lines.join('\n'));
+}
+
+// ── ペア（夫婦で共有） ──
+function partnerLabel() { return pair?.partnerName ? pair.partnerName + 'さん' : 'パートナー'; }
+function updatePairBtn() {
+  const b = document.getElementById('pair-hbtn');
+  if (!b) return;
+  b.textContent = pair ? `👫 ${pair.partnerName || 'ペア'}` : '👫 ペア';
+  b.style.color = pair ? '#f472b6' : '';
+  b.style.borderColor = pair ? '#f472b650' : '';
+}
+async function pairApi(action, extra) {
+  const res = await fetch('/api/pair', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action, code:pair.code, role:pair.role, name:pair.name, ...extra}),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'HTTP ' + res.status);
+  return data;
+}
+
+function openPairModal() {
+  renderPairModal();
+  document.getElementById('pair-modal').style.display = 'flex';
+}
+function renderPairModal() {
+  const body = document.getElementById('pair-modal-body');
+  const nameInput = `<label class="modal-label">あなたの呼び名</label>
+    <input id="pair-name" class="modal-input" style="font-size:15px;font-family:inherit" maxlength="20" placeholder="例: たろう" value="${esc(pair?.name || '')}">`;
+  if (!pair) {
+    body.innerHTML = `
+      <h3>👫 ペア設定</h3>
+      <div class="pair-note" style="margin-top:0">パートナーとペアを組むと、「👫 2人分」をオンにした食事が相手のアプリにも自動で記録されます。</div>
+      ${nameInput}
+      <button class="pair-btn" style="background:#f472b6;color:#000" onclick="createPair()">新しくペアを作る</button>
+      <div class="pair-note" style="text-align:center;margin-top:14px">または、パートナーから届いたコードで参加</div>
+      <input id="pair-code-input" class="modal-input" placeholder="ペアコード" autocapitalize="characters" style="margin-top:6px">
+      <button class="pair-btn" style="background:#818cf8;color:#000" onclick="joinPair()">参加する</button>
+      <div class="modal-btns"><button class="modal-cancel" onclick="closeModal('pair-modal')">閉じる</button></div>`;
+    return;
+  }
+  body.innerHTML = `
+    <h3>👫 ペア設定</h3>
+    <label class="modal-label" style="margin-top:0">ペアコード</label>
+    <div class="pair-code">${esc(pair.code)}</div>
+    <button class="pair-btn" style="background:#10b981;color:#000" onclick="sharePairCode()">📤 コードをパートナーに送る</button>
+    <div class="pair-note">パートナー: ${pair.partnerName ? esc(pair.partnerName) + 'さん（接続済み）' : 'まだ参加していません。コードを送って「参加する」から入力してもらってください。'}</div>
+    ${nameInput}
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="unpair()">ペア解除</button>
+      <button class="modal-save" onclick="savePairName()">保存</button>
+    </div>`;
+}
+function genPairCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const buf = new Uint32Array(10);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, n => chars[n % chars.length]).join('');
+}
+function readPairName() {
+  return (document.getElementById('pair-name').value.trim() || 'わたし').slice(0, 20);
+}
+function setPair(p) {
+  pair = p;
+  if (p) save('c_pair', p); else { try { localStorage.removeItem('c_pair'); } catch(e) {} }
+  updatePairBtn();
+  renderAll();
+  renderPairModal();
+}
+async function createPair() {
+  setPair({code: genPairCode(), role: 'a', name: readPairName(), partnerName: ''});
+  await syncPair(true);
+}
+async function joinPair() {
+  const code = document.getElementById('pair-code-input').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!/^[A-Z2-9]{8,16}$/.test(code)) { showToast('⚠️ ペアコードを確認してください'); return; }
+  setPair({code, role: 'b', name: readPairName(), partnerName: ''});
+  await syncPair(true);
+  if (pair?.partnerName) showToast(`👫 ${partnerLabel()}とペアになりました`);
+}
+function savePairName() {
+  pair.name = readPairName();
+  save('c_pair', pair);
+  syncPair(true);
+  closeModal('pair-modal');
+}
+function unpair() {
+  if (!confirm('ペアを解除しますか？（記録済みの食事は残ります）')) return;
+  setPair(null);
+  closeModal('pair-modal');
+}
+function sharePairCode() {
+  shareText(`カロリートラッカーで一緒に記録しよう！\nアプリの「👫 ペア」→「参加する」にこのコードを入力してね\n\nペアコード: ${pair.code}\n${location.origin}`);
+}
+
+function toggleShare(key, btn) {
+  shareOn[key] = !shareOn[key];
+  save('c_share_on', shareOn);
+  btn.classList.toggle('on', shareOn[key]);
+}
+function shareEntry(key, i) {
+  const e = mealData[key][i];
+  if (!e) return;
+  if (e.sharedAt && !confirm(`${partnerLabel()}にはもう送っています。もう一度送りますか？`)) return;
+  sendToPartner(key, e, currentDate);
+}
+function updateStoredEntry(date, key, id, fn) {
+  if (date === currentDate) {
+    const e = (mealData[key]||[]).find(x => x.id === id);
+    if (e) { fn(e); saveMealData(); renderAll(); }
+    return;
+  }
+  try {
+    const d = JSON.parse(localStorage.getItem('c_meals_' + date) || 'null');
+    const e = d && (d[key]||[]).find(x => x.id === id);
+    if (e) { fn(e); save('c_meals_' + date, d); }
+  } catch(err) {}
+}
+async function sendToPartner(key, entry, date) {
+  if (!pair) return;
+  const {input, meals, total, advice, score} = entry;
+  try {
+    await pairApi('send', {item: {date, mealKey: key, entry: {input, meals, total, advice, score}}});
+    updateStoredEntry(date, key, entry.id, e => { e.sharedAt = Date.now(); });
+    showToast(`👫 ${partnerLabel()}にも記録しました`);
+  } catch(e) {
+    showToast('⚠️ パートナーに送れませんでした: ' + e.message);
+  }
+}
+
+function cleanIncoming(it) {
+  const num = v => Math.max(0, Math.round(Number(v) || 0));
+  const e = it.entry || {};
+  const t = e.total || {};
+  return {
+    input: String(e.input || '').slice(0, 300),
+    meals: (Array.isArray(e.meals) ? e.meals : []).slice(0, 30).map(f => ({
+      name: String(f?.name || '').slice(0, 80), amount: String(f?.amount || '').slice(0, 40),
+      calories: num(f?.calories), fat: num(f?.fat), carbs: num(f?.carbs), protein: num(f?.protein),
+    })),
+    total: {calories: num(t.calories), fat: num(t.fat), carbs: num(t.carbs), protein: num(t.protein)},
+    advice: String(e.advice || '').slice(0, 500),
+    score: num(e.score),
+    from: String(it.fromName || 'パートナー').slice(0, 20),
+  };
+}
+async function syncPair(showErrors) {
+  if (!pair || syncing) return;
+  syncing = true;
+  try {
+    const r = await pairApi('sync');
+    if ((r.partnerName || '') !== (pair.partnerName || '')) {
+      pair.partnerName = r.partnerName || '';
+      save('c_pair', pair);
+      updatePairBtn();
+      if (document.getElementById('pair-modal').style.display === 'flex') renderPairModal();
+    }
+    const got = [];
+    let n = 0;
+    (r.items || []).forEach(it => {
+      const m = MEALS.find(x => x.key === it.mealKey);
+      if (!m || !/^\d{4}-\d{2}-\d{2}$/.test(it.date || '')) return;
+      const entry = {...cleanIncoming(it), id: Date.now() + (n++)};
+      if (it.date === currentDate) {
+        mealData[m.key].push(entry);
+        saveMealData();
+      } else {
+        let d;
+        try { d = JSON.parse(localStorage.getItem('c_meals_' + it.date) || 'null'); } catch(e) {}
+        d = d || {morning:[], lunch:[], snack:[], dinner:[]};
+        (d[m.key] = d[m.key] || []).push(entry);
+        save('c_meals_' + it.date, d);
+      }
+      got.push({m, entry});
+    });
+    if (got.length) {
+      renderAll();
+      const g = got[0];
+      showToast(got.length === 1
+        ? `💌 ${g.entry.from}さんから${g.m.label}「${g.entry.input.slice(0, 20)}」が届きました`
+        : `💌 ${g.entry.from}さんから食事が${got.length}件届きました`);
+    }
+  } catch(e) {
+    if (showErrors) showToast('⚠️ 同期できませんでした: ' + e.message);
+  } finally {
+    syncing = false;
+  }
 }
 
 load();
