@@ -1,8 +1,19 @@
 import { createHash } from 'crypto';
 
 // Vercel Marketplace の Upstash Redis（旧 Vercel KV）を REST で使う
-const REDIS_URL   = process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// 接続時の Custom Prefix によって変数名が変わる（KV_REST_API_URL, STORAGE_REST_API_URL など）ので、
+// 既定の名前が無ければ *_REST_API_URL / *_REST_API_TOKEN の組を探す
+function findRedisEnv() {
+  const env = process.env;
+  if (env.KV_REST_API_URL && env.KV_REST_API_TOKEN) return [env.KV_REST_API_URL, env.KV_REST_API_TOKEN];
+  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) return [env.UPSTASH_REDIS_REST_URL, env.UPSTASH_REDIS_REST_TOKEN];
+  for (const k of Object.keys(env)) {
+    const m = k.match(/^(.*)_REST_API_URL$/);
+    if (m && env[m[1] + '_REST_API_TOKEN']) return [env[k], env[m[1] + '_REST_API_TOKEN']];
+  }
+  return [];
+}
+const [REDIS_URL, REDIS_TOKEN] = findRedisEnv();
 
 const CODE_RE = /^[A-Z2-9]{8,16}$/;
 const ROLES = ['a', 'b'];
