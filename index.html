@@ -94,12 +94,6 @@ input{outline:none}
 .w-list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #0f0f1c;font-size:12px}
 .spinner{display:inline-block;width:11px;height:11px;border:2px solid #333;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.habit-item{background:#09090f;border:1px solid #151520;border-radius:14px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
-.habit-check{width:28px;height:28px;border-radius:8px;border:2px solid #1a1a2e;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s;background:none}
-.habit-check.done{background:#818cf8;border-color:#818cf8}
-.habit-name{flex:1;font-size:14px;color:#ccc}
-.habit-name.done{color:#444;text-decoration:line-through}
-.habit-del{background:none;border:none;color:#2a2a3e;cursor:pointer;font-size:14px;padding:2px 6px}
 .share-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;opacity:.35}
 .share-btn.sent{opacity:1}
 .pair-toggle{background:#09090f;border:1px solid #1a1a2e;border-radius:9px;padding:8px 10px;color:#555;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
@@ -239,7 +233,6 @@ input{outline:none}
   <div class="tabs">
     <button class="tab-btn active" id="tab-food" onclick="showTab('food')">🍽️ 食事</button>
     <button class="tab-btn" id="tab-weight" onclick="showTab('weight')">⚖️ 体重</button>
-    <button class="tab-btn" id="tab-habit" onclick="showTab('habit')">✅ 習慣</button>
   </div>
 
   <div class="sections" id="sections"></div>
@@ -266,21 +259,7 @@ input{outline:none}
       <div id="w-list" style="margin-top:12px"></div>
     </div>
   </div>
-  <div class="h-section" id="h-section" style="display:none;padding:10px 14px 0">
-    <!-- Add habit form -->
-    <div style="background:#09090f;border:1px solid #151520;border-radius:16px;padding:16px;margin-bottom:12px">
-      <div style="font-size:10px;color:#555;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">習慣を追加</div>
-      <div style="display:flex;gap:8px">
-        <input id="habit-input" type="text" placeholder="例: 漢方を飲む" maxlength="30"
-          style="flex:1;background:#06060e;border:1px solid #1a1a2e;border-radius:10px;padding:10px 12px;color:#e0e0e0;font-size:14px;outline:none"
-          onkeydown="if(event.key==='Enter')addHabit()">
-        <button onclick="addHabit()" style="background:#818cf8;border:none;border-radius:10px;padding:10px 16px;color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">追加</button>
-      </div>
-    </div>
-    <!-- Habit list -->
-    <div id="habit-list"></div>
-    <div id="monthly-report" style="background:#09090f;border:1px solid #151520;border-radius:16px;padding:16px;margin-top:12px"></div>
-  </div>
+  <div id="monthly-report" style="background:#09090f;border:1px solid #151520;border-radius:16px;padding:16px;margin:0 14px"></div>
 
 </div>
 
@@ -373,8 +352,6 @@ let weightData = {};
 let favorites = [];
 let openSecs = {morning:true, lunch:true, snack:true, dinner:true};
 let aeteMealKey = 'lunch';
-let habits = [];
-let habitChecks = {};
 let goalWeight = 0;
 let currentDate = '';
 let pair = null; // {code, role:'a'|'b', name, partnerName}
@@ -393,8 +370,6 @@ function load() {
     weightData  = JSON.parse(localStorage.getItem('c_weight') || '{}');
     favorites   = JSON.parse(localStorage.getItem('c_favs') || '[]');
     goalWeight  = parseFloat(localStorage.getItem('c_goalweight')) || 0;
-    habits      = JSON.parse(localStorage.getItem('c_habits') || '[]');
-    habitChecks = JSON.parse(localStorage.getItem('c_habit_checks') || '{}');
     pair        = JSON.parse(localStorage.getItem('c_pair') || 'null');
     shareOn     = {...shareOn, ...JSON.parse(localStorage.getItem('c_share_on') || '{}')};
   } catch(e) {}
@@ -512,37 +487,23 @@ function showTab(tab) {
     doShowWeight();
     return;
   }
-  if (tab === 'habit') {
-    weightUnlocked = false;
-    document.getElementById('sections').style.display = 'none';
-    document.getElementById('w-section').style.display = 'none';
-    document.getElementById('h-section').style.display = 'block';
-    document.getElementById('rice-box').style.display = 'none';
-    document.getElementById('tab-food').className = 'tab-btn';
-    document.getElementById('tab-weight').className = 'tab-btn';
-    document.getElementById('tab-habit').className = 'tab-btn active';
-    renderHabits();
-    renderMonthlyReport();
-    return;
-  }
   // food tab
   weightUnlocked = false;
   document.getElementById('sections').style.display = 'block';
+  document.getElementById('monthly-report').style.display = 'block';
   document.getElementById('w-section').style.display = 'none';
-  document.getElementById('h-section').style.display = 'none';
   document.getElementById('rice-box').style.display = '';
   document.getElementById('tab-food').className = 'tab-btn active';
   document.getElementById('tab-weight').className = 'tab-btn';
-  document.getElementById('tab-habit').className = 'tab-btn';
+  renderAll();
 }
 function doShowWeight() {
   document.getElementById('sections').style.display = 'none';
+  document.getElementById('monthly-report').style.display = 'none';
   document.getElementById('w-section').style.display = 'block';
-  document.getElementById('h-section').style.display = 'none';
   document.getElementById('rice-box').style.display = 'none';
   document.getElementById('tab-food').className = 'tab-btn';
   document.getElementById('tab-weight').className = 'tab-btn active';
-  document.getElementById('tab-habit').className = 'tab-btn';
   renderWeightSection();
 }
 
@@ -731,6 +692,7 @@ function renderAll() {
   renderSections();
   renderRice();
   renderSummary();
+  renderMonthlyReport();
 }
 
 //
@@ -918,30 +880,6 @@ function drawChart() {
 }
 
 //
-// Habit functions
-function addHabit() {
-  const input = document.getElementById('habit-input');
-  const name = input.value.trim();
-  if (!name) return;
-  habits.push({id: Date.now(), name});
-  save('c_habits', habits);
-  input.value = '';
-  renderHabits();
-}
-
-function deleteHabit(id) {
-  habits = habits.filter(h => h.id !== id);
-  save('c_habits', habits);
-  renderHabits();
-}
-
-function toggleHabit(id) {
-  if (!habitChecks[currentDate]) habitChecks[currentDate] = {};
-  habitChecks[currentDate][id] = !habitChecks[currentDate][id];
-  save('c_habit_checks', habitChecks);
-  renderHabits();
-}
-
 function renderMonthlyReport() {
   const container = document.getElementById('monthly-report');
   if (!container) return;
@@ -949,7 +887,6 @@ function renderMonthlyReport() {
   const y = now.getFullYear();
   const m = String(now.getMonth()+1).padStart(2,'0');
   let underGoalDays = 0, recordedDays = 0;
-  let habitTotalChecks = 0, habitMaxChecks = 0;
   let bars = '';
   for (let d = 1; d <= now.getDate(); d++) {
     const ds = y+'-'+m+'-'+String(d).padStart(2,'0');
@@ -965,31 +902,17 @@ function renderMonthlyReport() {
     const h = cal > 0 ? Math.min(40, Math.round(cal/goalCal*40)) : 4;
     const col = cal <= 0 ? '#1a1a2e' : cal <= goalCal ? '#10b981' : '#ef4444';
     bars += '<div style="flex:1;background:'+col+';border-radius:2px;height:'+h+'px"></div>';
-    const checks = habitChecks[ds] || {};
-    habitMaxChecks += habits.length;
-    habitTotalChecks += habits.filter(function(h){return checks[h.id];}).length;
   }
-  const habitPct = habitMaxChecks > 0 ? Math.round(habitTotalChecks/habitMaxChecks*100) : 0;
   const calPct = recordedDays > 0 ? Math.round(underGoalDays/recordedDays*100) : 0;
   container.innerHTML =
     '<div style="font-size:10px;color:#555;margin-bottom:12px">'+y+'年'+parseInt(m)+'月の記録</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
-      '<div style="background:#0f0f1a;border-radius:12px;padding:14px;text-align:center">'+
-        '<div style="font-size:10px;color:#555;margin-bottom:6px">カロリー達成日</div>'+
-        '<div style="font-size:28px;font-weight:700;color:#10b981">'+underGoalDays+'</div>'+
-        '<div style="font-size:11px;color:#333">/ '+recordedDays+'日記録</div>'+
-        '<div style="margin-top:8px;height:5px;background:#1a1a2e;border-radius:99px;overflow:hidden">'+
-        '<div style="height:100%;width:'+calPct+'%;background:#10b981;border-radius:99px"></div></div>'+
-        '<div style="font-size:10px;color:#10b981;margin-top:4px">'+calPct+'%</div>'+
-      '</div>'+
-      '<div style="background:#0f0f1a;border-radius:12px;padding:14px;text-align:center">'+
-        '<div style="font-size:10px;color:#555;margin-bottom:6px">習慣達成率</div>'+
-        '<div style="font-size:28px;font-weight:700;color:#818cf8">'+habitPct+'%</div>'+
-        '<div style="font-size:11px;color:#333">'+habitTotalChecks+'/'+habitMaxChecks+'チェック</div>'+
-        '<div style="margin-top:8px;height:5px;background:#1a1a2e;border-radius:99px;overflow:hidden">'+
-        '<div style="height:100%;width:'+habitPct+'%;background:#818cf8;border-radius:99px"></div></div>'+
-        '<div style="font-size:10px;color:#818cf8;margin-top:4px">'+now.getDate()+'日経過</div>'+
-      '</div>'+
+    '<div style="background:#0f0f1a;border-radius:12px;padding:14px;text-align:center;margin-bottom:10px">'+
+      '<div style="font-size:10px;color:#555;margin-bottom:6px">カロリー達成日</div>'+
+      '<div style="font-size:28px;font-weight:700;color:#10b981">'+underGoalDays+'</div>'+
+      '<div style="font-size:11px;color:#333">/ '+recordedDays+'日記録（'+now.getDate()+'日経過）</div>'+
+      '<div style="margin-top:8px;height:5px;background:#1a1a2e;border-radius:99px;overflow:hidden">'+
+      '<div style="height:100%;width:'+calPct+'%;background:#10b981;border-radius:99px"></div></div>'+
+      '<div style="font-size:10px;color:#10b981;margin-top:4px">'+calPct+'%</div>'+
     '</div>'+
     '<div style="background:#0f0f1a;border-radius:12px;padding:12px">'+
       '<div style="font-size:10px;color:#555;margin-bottom:8px">今月の日別カロリー達成</div>'+
@@ -998,43 +921,6 @@ function renderMonthlyReport() {
       '<span>1日</span><span>'+now.getDate()+'日</span></div>'+
     '</div>';
 }
-function renderHabits() {
-  const list = document.getElementById('habit-list');
-  if (!list) return;
-  const checks = habitChecks[currentDate] || {};
-  const doneCount = habits.filter(h => checks[h.id]).length;
-  const total = habits.length;
-
-  if (habits.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:#333;font-size:13px;padding:30px">習慣を追加してください</div>';
-    return;
-  }
-
-  // Progress bar
-  const pct = total > 0 ? Math.round(doneCount/total*100) : 0;
-  list.innerHTML = `
-    <div style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:#555;margin-bottom:6px">
-        <span>今日の達成</span>
-        <span style="color:${pct===100?'#10b981':'#818cf8'}">${doneCount}/${total} (${pct}%)</span>
-      </div>
-      <div style="height:6px;background:#1a1a2e;border-radius:99px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${pct===100?'#10b981':'#818cf8'};border-radius:99px;transition:width .5s"></div>
-      </div>
-    </div>
-    ${habits.map(h => {
-      const done = !!checks[h.id];
-      return `<div class="habit-item">
-        <button class="habit-check ${done?'done':''}" onclick="toggleHabit(${h.id})">
-          ${done ? '✓' : ''}
-        </button>
-        <span class="habit-name ${done?'done':''}">${h.name}</span>
-        <button class="habit-del" onclick="deleteHabit(${h.id})">✕</button>
-      </div>`;
-    }).join('')}
-  `;
-}
-
 function renderSummary() {
   const existing = document.getElementById('daily-summary');
   if (existing) existing.remove();
@@ -1195,7 +1081,7 @@ function renderPairModal() {
   if (!pair) {
     body.innerHTML = `
       <h3>👫 ペア設定</h3>
-      <div class="pair-note" style="margin-top:0">パートナーとペアを組むと、「👫 2人分」をオンにした食事が相手のアプリにも自動で記録されます。</div>
+      <div class="pair-note" style="margin-top:0">パートナーとペアを組むと、「👫 2人分」をオンにした食事が相手のアプリにも自動で記録されます。<br>🔒 体重・目標はペアでも共有されません。</div>
       ${nameInput}
       <button class="pair-btn" style="background:#f472b6;color:#000" onclick="createPair()">新しくペアを作る</button>
       <div class="pair-note" style="text-align:center;margin-top:14px">または、パートナーから届いたコードで参加</div>
@@ -1210,6 +1096,7 @@ function renderPairModal() {
     <div class="pair-code">${esc(pair.code)}</div>
     <button class="pair-btn" style="background:#10b981;color:#000" onclick="sharePairCode()">📤 コードをパートナーに送る</button>
     <div class="pair-note">パートナー: ${pair.partnerName ? esc(pair.partnerName) + 'さん（接続済み）' : 'まだ参加していません。コードを送って「参加する」から入力してもらってください。'}</div>
+    <div class="pair-note">🔒 共有されるのは「👫 2人分」で送った食事だけです。体重・目標は共有されません。</div>
     ${nameInput}
     <div class="modal-btns">
       <button class="modal-cancel" onclick="unpair()">ペア解除</button>
