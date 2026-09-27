@@ -72,7 +72,14 @@ input{outline:none}
 .fav-star{background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px}
 .entry-detail{border-top:1px solid #1a1a2e;padding:11px 13px;display:none}
 .entry-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #0f0f1c;color:#888}
-.entry-row span:last-child{color:#f59e0b}
+.entry-row{align-items:center;gap:6px}
+.entry-row .item-name{flex:1;min-width:0}
+.entry-row .item-kcal{color:#f59e0b;min-width:62px;text-align:right}
+.qty{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.qty button{width:26px;height:26px;border-radius:7px;border:1px solid #1a1a2e;background:#0f0f1a;color:#aaa;font-size:15px;line-height:1;cursor:pointer;font-family:inherit}
+.qty-val{min-width:38px;text-align:center;font-size:11px;color:#555}
+.qty-val.changed{color:#f472b6;font-weight:700}
+.qty-hint{font-size:10px;color:#555;margin-bottom:6px}
 .advice-box{margin-top:8px;padding:9px 11px;background:#080814;border-radius:8px;font-size:12px;color:#888;line-height:1.7}
 .input-box{background:#06060e;border:1px solid #151520;border-radius:11px;padding:10px 12px;margin-top:6px}
 .input-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
@@ -357,6 +364,7 @@ let currentDate = '';
 let pair = null; // {code, role:'a'|'b', name, partnerName}
 let shareOn = {morning:false, lunch:false, snack:false, dinner:true};
 let lastGrade = '';
+let detailOpen = {}; // entry id -> 詳細を開いているか
 let syncing = false;
 let syncTimer = null;
 
@@ -623,8 +631,20 @@ function renderSections() {
           <button class="fav-star" onclick="event.stopPropagation();toggleFav('${m.key}',${i})" title="お気に入り">${favorites.some(f=>f.input===e.input)?'⭐':'☆'}</button>
           <button class="entry-del" onclick="event.stopPropagation();deleteEntry('${m.key}',${i})">✕</button>
         </div>
-        <div class="entry-detail" id="det-${m.key}-${i}" style="display:${e.advice ? 'block' : 'none'}">
-          ${(e.meals||[]).map(f=>`<div class="entry-row"><span>${esc(f.name)} <span style="color:#333">(${esc(f.amount)})</span></span><span>${f.calories} kcal</span></div>`).join('')}
+        <div class="entry-detail" id="det-${m.key}-${i}" style="display:${isDetailOpen(e) ? 'block' : 'none'}">
+          ${e.from && (e.meals||[]).length ? `<div class="qty-hint">量が違うときは − ＋ で自分の量に調整できます</div>` : ''}
+          ${(e.meals||[]).map((f,j)=>{
+            const r = f.ratio ?? 1;
+            return `<div class="entry-row">
+              <span class="item-name">${esc(f.name)} <span style="color:#333">(${esc(f.amount)})</span></span>
+              <span class="qty">
+                <button onclick="adjustItem('${m.key}',${i},${j},-0.25)" aria-label="減らす">−</button>
+                <span class="qty-val ${r!==1?'changed':''}">${r===0?'なし':'×'+r}</span>
+                <button onclick="adjustItem('${m.key}',${i},${j},0.25)" aria-label="増やす">＋</button>
+              </span>
+              <span class="item-kcal">${f.calories} kcal</span>
+            </div>`;
+          }).join('')}
           ${e.advice ? `<div class="advice-box">💬 ${esc(e.advice)}</div>` : ''}
         </div>
       </div>`).join('');
@@ -697,9 +717,40 @@ function renderAll() {
 
 //
 function toggleSec(key) { openSecs[key] = !openSecs[key]; renderAll(); }
+function isDetailOpen(e) {
+  return detailOpen[e.id] ?? !!(e.advice || e.from);
+}
 function toggleEntry(key, i) {
+  const e = mealData[key][i];
   const el = document.getElementById(`det-${key}-${i}`);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (!e || !el) return;
+  detailOpen[e.id] = el.style.display === 'none';
+  el.style.display = detailOpen[e.id] ? 'block' : 'none';
+}
+
+// 品目ごとの量を倍率で調整（0 = なし）。元の値は base / baseTotal に残す
+const NUTRIENTS = ['calories','fat','carbs','protein'];
+function scaleAmount(amount, r) {
+  const m = String(amount || '').match(/(\d+(?:\.\d+)?)\s*g/);
+  if (m) return amount.replace(m[0], Math.round(parseFloat(m[1]) * r) + 'g');
+  return r === 1 ? amount : `${amount} ×${r}`;
+}
+function adjustItem(key, i, j, delta) {
+  const e = mealData[key][i];
+  const f = e && (e.meals || [])[j];
+  if (!f) return;
+  if (!f.base) f.base = {amount: f.amount, ...Object.fromEntries(NUTRIENTS.map(n => [n, f[n] || 0]))};
+  if (!e.baseTotal) e.baseTotal = Object.fromEntries(NUTRIENTS.map(n => [n, e.total?.[n] || 0]));
+  const r = Math.min(3, Math.max(0, Math.round(((f.ratio ?? 1) + delta) * 100) / 100));
+  f.ratio = r;
+  NUTRIENTS.forEach(n => { f[n] = Math.round(f.base[n] * r); });
+  f.amount = scaleAmount(f.base.amount, r);
+  // 合計 = 元の合計 + 調整した品目の差分（AIの合計と品目の和がずれていても崩れないように）
+  e.total = Object.fromEntries(NUTRIENTS.map(n => [n, Math.max(0,
+    e.baseTotal[n] + e.meals.reduce((s, x) => s + (x.base ? (x[n] || 0) - x.base[n] : 0), 0))]));
+  detailOpen[e.id] = true;
+  saveMealData();
+  renderAll();
 }
 function deleteEntry(key, i) { mealData[key].splice(i, 1); saveMealData(); renderAll(); }
 
