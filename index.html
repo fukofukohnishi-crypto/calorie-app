@@ -325,17 +325,24 @@ const MEALS = [
   {key:'snack',   label:'おやつ', emoji:'🍪', color:'#ec4899'},
   {key:'dinner',  label:'夕食', emoji:'🌙', color:'#818cf8'},
 ];
+const QUICK_RICE_140 = {name:'ご飯140g', cal:235, fat:0, carbs:52, protein:4};
+const QUICK_RICE_200 = {name:'ご飯200g', cal:336, fat:0, carbs:74, protein:5};
+const QUICK_MIKAN = {name:'みかん1個', cal:45, fat:0, carbs:11, protein:1};
+const QUICK_GRAPEFRUIT = {name:'グレープフルーツ半分', cal:48, fat:0, carbs:12, protein:1};
 const QUICK_MORNING = [
-  {name:'ご飯140g', cal:235, fat:0, carbs:52, protein:4},
-  {name:'ご飯200g', cal:336, fat:0, carbs:74, protein:5},
+  QUICK_RICE_140,
+  QUICK_RICE_200,
+  {name:'トースト', cal:150, fat:3, carbs:28, protein:5}, // 6枚切り1枚
   {name:'卵焼き', cal:80, fat:5, carbs:2, protein:6},
   {name:'納豆', cal:84, fat:5, carbs:6, protein:8},
   {name:'味噌汁', cal:40, fat:1, carbs:5, protein:2},
   {name:'レタスサラダ', cal:50, fat:0, carbs:3, protein:1},
   {name:'りんご', cal:35, fat:0, carbs:20, protein:0},
-  {name:'みかん', cal:45, fat:0, carbs:11, protein:1},
-  {name:'グレープフルーツ半分', cal:48, fat:0, carbs:12, protein:1},
+  QUICK_MIKAN,
+  QUICK_GRAPEFRUIT,
 ];
+const QUICK_DINNER = [QUICK_RICE_140, QUICK_RICE_200, QUICK_GRAPEFRUIT, QUICK_MIKAN];
+const QUICK = {morning: QUICK_MORNING, dinner: QUICK_DINNER};
 
 let apiKey = '';
 let goalCal = 1800;
@@ -635,8 +642,8 @@ function renderSections() {
         <span class="fav-chip-del" onclick="event.stopPropagation();deleteFav(${favorites.indexOf(f)})">✕</span>
       </div>`).join('')}</div>` : '';
 
-    const quickHTML = m.key === 'morning' ? `<div class="quick-btns">${
-      QUICK_MORNING.map(q=>`<button class="quick-btn" onclick="addQuick('morning','${q.name}',${q.cal},${q.fat},${q.carbs},${q.protein})">${q.name}</button>`).join('')
+    const quickHTML = QUICK[m.key] ? `<div class="quick-btns">${
+      QUICK[m.key].map((q,qi)=>`<button class="quick-btn" onclick="addQuick('${m.key}',${qi})">${q.name}</button>`).join('')
     }</div>` : '';
 
     const aeteBtnHTML = m.key === 'lunch' ? `<button class="aete-btn" onclick="openAete('lunch')">🍱 あえて</button>` : '';
@@ -749,7 +756,10 @@ function applyFav(key, fi) {
 }
 function deleteFav(fi) { favorites.splice(fi, 1); save('c_favs', favorites); renderAll(); }
 
-function addQuick(key, name, cal, fat, carbs, protein) {
+function addQuick(key, qi) {
+  const q = QUICK[key]?.[qi];
+  if (!q) return;
+  const {name, cal, fat, carbs, protein} = q;
   addEntry(key, {
     input: name,
     meals: [{name, calories:cal, fat, carbs, protein, amount:'1食分'}],
