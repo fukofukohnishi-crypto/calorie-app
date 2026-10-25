@@ -130,8 +130,12 @@ input{outline:none}
 <div id="goal-modal" class="modal-bg" style="display:none">
   <div class="modal">
     <h3>🎯 目標設定</h3>
-    <label class="modal-label">1日の目標カロリー (kcal)</label>
-    <input id="goal-cal-input" class="modal-input" type="number" placeholder="1800">
+    <label class="modal-label">1日のカロリーの目安 (kcal)　下限 〜 上限</label>
+    <div style="display:flex;align-items:center;gap:8px">
+      <input id="goal-min-input" class="modal-input" type="number" inputmode="numeric" placeholder="1550">
+      <span style="color:#555">〜</span>
+      <input id="goal-max-input" class="modal-input" type="number" inputmode="numeric" placeholder="1650">
+    </div>
     <label class="modal-label">1日のご飯目標 (g)</label>
     <input id="goal-rice-input" class="modal-input" type="number" placeholder="600">
     <label class="modal-label">体重タブのパスワード（任意）</label>
@@ -345,7 +349,9 @@ const QUICK_DINNER = [QUICK_RICE_140, QUICK_RICE_200, QUICK_GRAPEFRUIT, QUICK_MI
 const QUICK = {morning: QUICK_MORNING, dinner: QUICK_DINNER};
 
 let apiKey = '';
-let goalCal = 1800;
+let goalCal = 1800; // 目安の中央値（ご飯量アドバイスなどに使う）
+let goalMin = 1750;
+let goalMax = 1850;
 let goalRice = 600;
 let weightPw = '';
 let weightUnlocked = false;
@@ -356,7 +362,6 @@ let openSecs = {morning:true, lunch:true, snack:true, dinner:true};
 let aeteMealKey = 'lunch';
 let goalWeight = 0;
 let currentDate = '';
-let lastGrade = '';
 let detailOpen = {}; // entry id -> 詳細を開いているか
 
 //
@@ -364,6 +369,9 @@ function load() {
   try {
     apiKey      = localStorage.getItem('c_apikey') || '';
     goalCal     = parseInt(localStorage.getItem('c_goalcal')) || 1800;
+    goalMin     = parseInt(localStorage.getItem('c_goalcal_min')) || goalCal - 50;
+    goalMax     = parseInt(localStorage.getItem('c_goalcal_max')) || goalCal + 50;
+    goalCal     = Math.round((goalMin + goalMax) / 2);
     goalRice    = parseInt(localStorage.getItem('c_goalrice')) || 600;
     weightPw    = localStorage.getItem('c_weightpw') || '';
     weightData  = JSON.parse(localStorage.getItem('c_weight') || '{}');
@@ -434,7 +442,8 @@ function saveKeyModal() {
 }
 
 function openGoalModal() {
-  document.getElementById('goal-cal-input').value = goalCal;
+  document.getElementById('goal-min-input').value = goalMin;
+  document.getElementById('goal-max-input').value = goalMax;
   document.getElementById('goal-rice-input').value = goalRice;
   document.getElementById('goal-pw-input').value = weightPw;
   document.getElementById('goal-modal').style.display = 'flex';
@@ -445,11 +454,17 @@ function saveGoalWeight() {
   drawChart();
 }
 function saveGoalModal() {
-  const c = parseInt(document.getElementById('goal-cal-input').value);
+  let lo = parseInt(document.getElementById('goal-min-input').value);
+  let hi = parseInt(document.getElementById('goal-max-input').value);
   const r = parseInt(document.getElementById('goal-rice-input').value);
   const pw = document.getElementById('goal-pw-input').value;
   const gw = parseFloat(document.getElementById('goal-weight-input').value);
-  if (c > 0) { goalCal = c; save('c_goalcal', c); }
+  if (lo > 0 || hi > 0) {
+    lo = lo > 0 ? lo : hi; hi = hi > 0 ? hi : lo;
+    if (lo > hi) [lo, hi] = [hi, lo];
+    goalMin = lo; goalMax = hi; goalCal = Math.round((lo + hi) / 2);
+    save('c_goalcal_min', lo); save('c_goalcal_max', hi); save('c_goalcal', goalCal);
+  }
   if (r > 0) { goalRice = r; save('c_goalrice', r); }
   if (gw > 0) { goalWeight = gw; save('c_goalweight', gw); }
   weightPw = pw;
@@ -519,9 +534,9 @@ function getTotals(keys) {
 
 //
 function renderGauge(t) {
-  const pct = Math.min(1, t.calories / goalCal);
-  const over = t.calories > goalCal;
-  const color = over ? '#ef4444' : pct > 0.85 ? '#f97316' : pct > 0.55 ? '#f59e0b' : '#22d3ee';
+  const pct = Math.min(1, t.calories / goalMax);
+  const over = t.calories > goalMax;
+  const color = over ? '#818cf8' : '#22d3ee';
   const arc = document.getElementById('gauge-arc');
   arc.style.strokeDashoffset = 2 * Math.PI * 76 * (1 - pct);
   arc.style.stroke = color;
@@ -529,22 +544,26 @@ function renderGauge(t) {
   calEl.textContent = t.calories;
   calEl.style.color = color;
   const remEl = document.getElementById('gauge-rem');
-  remEl.textContent = over ? `+${t.calories - goalCal} kcal 超過` : `残り ${goalCal - t.calories} kcal`;
-  remEl.style.color = over ? '#ef4444' : '#666';
-  document.getElementById('gauge-sub').innerHTML = `目標 ${goalCal} kcal<br>ご飯 ${goalRice}g/日`;
+  remEl.textContent = over ? `上限から +${t.calories - goalMax} kcal` : `上限まで ${goalMax - t.calories} kcal`;
+  remEl.style.color = '#666';
+  document.getElementById('gauge-sub').innerHTML = `目安 ${goalMin}〜${goalMax} kcal<br>ご飯 ${goalRice}g/日`;
 }
 
 //
+// PFC の目安（タンパク質20%・脂質27%・糖質53%）
+function macroGuide() {
+  return {
+    protein: Math.round(goalCal * 0.20 / 4),
+    fat:     Math.round(goalCal * 0.27 / 9),
+    carbs:   Math.round(goalCal * 0.53 / 4),
+  };
+}
 function renderMacros(t) {
-  const G = {fat:60, carbs:220, protein:80};
+  const G = macroGuide();
   ['fat','carbs','protein'].forEach(k => {
-    document.getElementById(k+'-val').textContent = t[k] + 'g';
-    const bar = document.getElementById(k+'-bar');
-    bar.style.width = Math.min(100, t[k]/G[k]*100) + '%';
+    document.getElementById(k+'-val').textContent = `${t[k]} / ${G[k]}g`;
+    document.getElementById(k+'-bar').style.width = Math.min(100, t[k]/G[k]*100) + '%';
   });
-  document.getElementById('fat-bar').style.background    = t.fat     > G.fat     ? '#ef4444' : '#ec4899';
-  document.getElementById('carbs-bar').style.background  = t.carbs   > G.carbs   ? '#ef4444' : '#818cf8';
-  document.getElementById('protein-bar').style.background= t.protein > G.protein ? '#ef4444' : '#22d3ee';
 }
 
 //
@@ -555,7 +574,7 @@ function renderSeg() {
   MEALS.forEach(m => {
     const cal = (mealData[m.key]||[]).reduce((s,e)=>s+(e.total?.calories||0),0);
     const d = document.createElement('div');
-    d.style.cssText = `width:${Math.min(100,cal/goalCal*100)}%;background:${m.color};transition:width .5s`;
+    d.style.cssText = `width:${Math.min(100,cal/goalMax*100)}%;background:${m.color};transition:width .5s`;
     bar.appendChild(d);
     const item = document.createElement('div');
     item.className = 'seg-item';
@@ -577,12 +596,14 @@ function renderRice() {
     return;
   }
   const totalCarbsAsRice = Math.round(sf.carbs / 37 * 100);
-  const riceRem = Math.max(0, goalRice - totalCarbsAsRice);
-  const remCal = goalCal - sf.calories;
+  const remCal = Math.max(0, goalCal - sf.calories);
+  // ご飯は糖質の目安で決め、残りカロリーの半分（残り半分はおかず）を超えないようにする
+  const riceByCal = Math.floor(remCal * 0.5 / 1.68 / 10) * 10;
+  const riceRem = Math.min(Math.max(0, goalRice - totalCarbsAsRice), riceByCal);
   const riceKcal = Math.round(riceRem * 1.68);
   const bowl = riceRem >= 250 ? '大盛り' : riceRem >= 180 ? '普通盛り' : riceRem >= 120 ? '小盛り' : riceRem >= 60 ? '少量' : 'なし';
   cnt.innerHTML = riceRem <= 0
-    ? `糖質がご飯目標に達しています。夕食は <span style="color:#f59e0b;font-weight:700">ご飯なし</span> でおかず中心に。残り ${remCal} kcal。`
+    ? `夕食は <span style="color:#f59e0b;font-weight:700">ご飯なし</span> でおかず中心に。目安の中央まで残り ${remCal} kcal。`
     : `糖質合計 ${sf.carbs}g → ご飯換算 ${totalCarbsAsRice}g（目標 ${goalRice}g）<br>🍚 夕食のご飯 <span style="color:#10b981;font-weight:700;font-size:17px">${riceRem}g（${bowl}）</span><br><span style="font-size:12px;color:#555">ご飯で ${riceKcal} kcal・おかずで残り ${remCal - riceKcal} kcal</span>`;
 }
 
@@ -670,6 +691,7 @@ function renderSections() {
           <div class="input-footer">
             <span class="input-hint">Enterで送信</span>
             <div class="input-btns">
+              ${yesterdayEntries(m.key).length ? `<button class="aete-btn" style="color:#aaa;border-color:#1a1a2e" onclick="copyYesterday('${m.key}')">↺ 昨日と同じ</button>` : ''}
               ${aeteBtnHTML}
               <button class="analyze-btn" id="btn-${m.key}" onclick="analyze('${m.key}')" style="background:${m.color};color:#000">解析する</button>
             </div>
@@ -919,46 +941,61 @@ function drawChart() {
 }
 
 //
+function dayCalories(ds) {
+  try {
+    const md = JSON.parse(localStorage.getItem('c_meals_' + ds) || 'null');
+    if (!md) return 0;
+    return MEALS.reduce((s, m) => s + (md[m.key]||[]).reduce((a, e) => a + (e.total?.calories || 0), 0), 0);
+  } catch(e) { return 0; }
+}
+function dateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+// 直近 days 日のうち、記録のある日の平均
+function avgCalories(endOffset, days) {
+  let sum = 0, n = 0;
+  for (let i = endOffset; i < endOffset + days; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const c = dayCalories(dateStr(d));
+    if (c > 0) { sum += c; n++; }
+  }
+  return {avg: n ? Math.round(sum / n) : 0, n};
+}
 function renderMonthlyReport() {
   const container = document.getElementById('monthly-report');
   if (!container) return;
   const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth()+1).padStart(2,'0');
-  let underGoalDays = 0, recordedDays = 0;
+  const thisWeek = avgCalories(1, 7), lastWeek = avgCalories(8, 7); // 記録途中の今日は含めない
+  const scale = goalMax * 1.4;
+  const bandLo = Math.round(goalMin / scale * 40), bandHi = Math.round(goalMax / scale * 40);
   let bars = '';
   for (let d = 1; d <= now.getDate(); d++) {
-    const ds = y+'-'+m+'-'+String(d).padStart(2,'0');
-    const saved = localStorage.getItem('c_meals_'+ds);
-    let cal = 0;
-    if (saved) {
-      const md = JSON.parse(saved);
-      cal = ['morning','lunch','snack','dinner'].reduce(function(s,k){
-        return s+(md[k]||[]).reduce(function(a,e){return a+(e.total&&e.total.calories||0);},0);
-      },0);
-      if (cal > 0) { recordedDays++; if (cal <= goalCal) underGoalDays++; }
-    }
-    const h = cal > 0 ? Math.min(40, Math.round(cal/goalCal*40)) : 4;
-    const col = cal <= 0 ? '#1a1a2e' : cal <= goalCal ? '#10b981' : '#ef4444';
-    bars += '<div style="flex:1;background:'+col+';border-radius:2px;height:'+h+'px"></div>';
+    const cal = dayCalories(dateStr(new Date(now.getFullYear(), now.getMonth(), d)));
+    const h = cal > 0 ? Math.min(40, Math.round(cal / scale * 40)) : 2;
+    bars += `<div style="flex:1;background:${cal > 0 ? '#818cf8' : '#1a1a2e'};border-radius:2px;height:${h}px"></div>`;
   }
-  const calPct = recordedDays > 0 ? Math.round(underGoalDays/recordedDays*100) : 0;
-  container.innerHTML =
-    '<div style="font-size:10px;color:#555;margin-bottom:12px">'+y+'年'+parseInt(m)+'月の記録</div>'+
-    '<div style="background:#0f0f1a;border-radius:12px;padding:14px;text-align:center;margin-bottom:10px">'+
-      '<div style="font-size:10px;color:#555;margin-bottom:6px">カロリー達成日</div>'+
-      '<div style="font-size:28px;font-weight:700;color:#10b981">'+underGoalDays+'</div>'+
-      '<div style="font-size:11px;color:#333">/ '+recordedDays+'日記録（'+now.getDate()+'日経過）</div>'+
-      '<div style="margin-top:8px;height:5px;background:#1a1a2e;border-radius:99px;overflow:hidden">'+
-      '<div style="height:100%;width:'+calPct+'%;background:#10b981;border-radius:99px"></div></div>'+
-      '<div style="font-size:10px;color:#10b981;margin-top:4px">'+calPct+'%</div>'+
-    '</div>'+
-    '<div style="background:#0f0f1a;border-radius:12px;padding:12px">'+
-      '<div style="font-size:10px;color:#555;margin-bottom:8px">今月の日別カロリー達成</div>'+
-      '<div style="display:flex;gap:3px;align-items:flex-end;height:40px">'+bars+'</div>'+
-      '<div style="display:flex;justify-content:space-between;font-size:9px;color:#333;margin-top:4px">'+
-      '<span>1日</span><span>'+now.getDate()+'日</span></div>'+
-    '</div>';
+  const avgCard = (label, w) => `
+    <div style="flex:1;background:#0f0f1a;border-radius:12px;padding:12px;text-align:center">
+      <div style="font-size:10px;color:#555;margin-bottom:4px">${label}</div>
+      <div style="font-size:22px;font-weight:700;color:#ccc">${w.n ? w.avg : '—'}</div>
+      <div style="font-size:10px;color:#444">${w.n ? `kcal・記録${w.n}日` : '記録なし'}</div>
+    </div>`;
+  container.innerHTML = `
+    <div style="font-size:10px;color:#555;margin-bottom:10px">1日の平均（記録した日だけで計算）</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      ${avgCard('昨日までの7日', thisWeek)}
+      ${avgCard('その前の7日', lastWeek)}
+    </div>
+    <div style="font-size:10px;color:#444;text-align:center;margin-bottom:12px">目安 ${goalMin}〜${goalMax} kcal</div>
+    <div style="background:#0f0f1a;border-radius:12px;padding:12px">
+      <div style="font-size:10px;color:#555;margin-bottom:8px">${now.getFullYear()}年${now.getMonth()+1}月の日別カロリー</div>
+      <div style="position:relative;display:flex;gap:3px;align-items:flex-end;height:40px">
+        <div style="position:absolute;left:0;right:0;bottom:${bandLo}px;height:${Math.max(1, bandHi - bandLo)}px;background:#22d3ee22;border-top:1px dashed #22d3ee55;border-bottom:1px dashed #22d3ee55"></div>
+        ${bars}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:#333;margin-top:4px">
+        <span>1日</span><span>${now.getDate()}日</span></div>
+    </div>`;
 }
 function renderSummary() {
   const existing = document.getElementById('daily-summary');
@@ -967,68 +1004,26 @@ function renderSummary() {
   const all = getTotals();
   if (all.calories === 0) return;
 
-  // Check if all 4 meals have entries
-  const allMealsDone = MEALS.every(m => (mealData[m.key]||[]).length > 0);
+  const G = macroGuide();
+  const pfc = k => Math.round(all[k] * (k === 'fat' ? 9 : 4) / all.calories * 100);
+  const cell = (label, k, color) => `
+      <div style="flex:1;background:#0f0f1a;border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:10px;color:#555;margin-bottom:2px">${label}</div>
+        <div style="font-size:14px;font-weight:700;color:${color}">${pfc(k)}%</div>
+        <div style="font-size:10px;color:#444">${all[k]} / ${G[k]}g</div>
+      </div>`;
 
-  // Always show summary if any data exists, highlight if complete
-  const remCal = goalCal - all.calories;
-  const over = all.calories > goalCal;
-  const pfc_p = Math.round(all.protein * 4 / all.calories * 100);
-  const pfc_f = Math.round(all.fat * 9 / all.calories * 100);
-  const pfc_c = Math.round(all.carbs * 4 / all.calories * 100);
-
-  let grade = '';
-  let comment = '';
-  let color = '#818cf8';
-
-  if (allMealsDone) {
-    if (!over && pfc_p >= 20 && pfc_f <= 30) {
-      grade = '🏆 完璧なバランス！';
-      comment = `素晴らしい1日でした！カロリーは目標内に収まり、PFCバランスもP${pfc_p}%・F${pfc_f}%・C${pfc_c}%と理想的です。タンパク質もしっかり摂れていて、筋肉を維持しながらダイエットできています。この調子を続けましょう！`;
-      color = '#10b981';
-    } else if (!over && pfc_p >= 15) {
-      grade = '👍 よく頑張りました！';
-      comment = `カロリーは目標内に収まりました。PFCバランスはP${pfc_p}%・F${pfc_f}%・C${pfc_c}%です。タンパク質をもう少し増やすと（肉・魚・卵・豆腐など）、筋肉を維持しながらより効果的なダイエットになります。`;
-      color = '#f59e0b';
-    } else if (over && (all.calories - goalCal) <= 100) {
-      grade = '😅 惜しい！';
-      comment = `目標まであと少しでした。${all.calories - goalCal}kcalのオーバーです。夕食のおかずを少し減らすか、おやつを控えると目標に届きます。明日また頑張りましょう！`;
-      color = '#f97316';
-    } else if (over) {
-      grade = '⚠️ カロリー超過';
-      comment = `今日は目標より${all.calories - goalCal}kcal多く摂取しました。糖質が${all.carbs}gと多めです。明日はご飯の量を少し減らして、野菜やタンパク質を増やしてみましょう。1日の超過は取り戻せます！`;
-      color = '#ef4444';
-    } else {
-      grade = '🌱 まずまず';
-      comment = `カロリーは目標内です。PFCバランスはP${pfc_p}%・F${pfc_f}%・C${pfc_c}%。タンパク質を意識して摂ると体型維持に効果的です。引き続き頑張りましょう！`;
-      color = '#818cf8';
-    }
-  } else {
-    comment = `現在 ${all.calories} kcal摂取中。残り ${Math.max(0, remCal)} kcal。全食事を記録すると詳しい総評が表示されます。`;
-    color = '#555';
-  }
-
-  lastGrade = grade;
   const div = document.createElement('div');
   div.id = 'daily-summary';
-  div.style.cssText = `margin:10px 14px 0;background:#09090f;border:1px solid ${color}30;border-radius:14px;padding:14px`;
+  div.style.cssText = 'margin:10px 14px 0;background:#09090f;border:1px solid #151520;border-radius:14px;padding:14px';
   div.innerHTML = `
-    <div style="font-size:10px;color:${color};letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">📊 今日の総評${grade ? ' ' + grade : ''}</div>
-    <div style="font-size:13px;color:#ccc;line-height:1.7">${comment}</div>
-    ${allMealsDone ? `<div style="display:flex;gap:8px;margin-top:10px">
-      <div style="flex:1;background:#0f0f1a;border-radius:8px;padding:8px;text-align:center">
-        <div style="font-size:10px;color:#555;margin-bottom:2px">P</div>
-        <div style="font-size:14px;font-weight:700;color:#22d3ee">${pfc_p}%</div>
-      </div>
-      <div style="flex:1;background:#0f0f1a;border-radius:8px;padding:8px;text-align:center">
-        <div style="font-size:10px;color:#555;margin-bottom:2px">F</div>
-        <div style="font-size:14px;font-weight:700;color:#ec4899">${pfc_f}%</div>
-      </div>
-      <div style="flex:1;background:#0f0f1a;border-radius:8px;padding:8px;text-align:center">
-        <div style="font-size:10px;color:#555;margin-bottom:2px">C</div>
-        <div style="font-size:14px;font-weight:700;color:#818cf8">${pfc_c}%</div>
-      </div>
-    </div>` : ''}
+    <div style="font-size:10px;color:#818cf8;letter-spacing:1px;margin-bottom:8px">📊 今日のまとめ</div>
+    <div style="font-size:13px;color:#ccc;line-height:1.7">合計 ${all.calories} kcal（目安 ${goalMin}〜${goalMax} kcal）</div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      ${cell('P タンパク質', 'protein', '#22d3ee')}
+      ${cell('F 脂質', 'fat', '#ec4899')}
+      ${cell('C 糖質', 'carbs', '#818cf8')}
+    </div>
     <button class="summary-share" onclick="shareSummary()">📤 今日のまとめを送る</button>
   `;
 
@@ -1063,6 +1058,22 @@ async function shareText(text) {
   window.open('https://line.me/R/share?text=' + encodeURIComponent(text), '_blank');
 }
 
+function yesterdayEntries(key) {
+  const p = currentDate.split('-');
+  const d = new Date(+p[0], +p[1]-1, +p[2]); d.setDate(d.getDate() - 1);
+  try { return (JSON.parse(localStorage.getItem('c_meals_' + dateStr(d)) || 'null') || {})[key] || []; }
+  catch(e) { return []; }
+}
+function copyYesterday(key) {
+  const src = yesterdayEntries(key);
+  if (!src.length) return;
+  const now = Date.now();
+  src.forEach((e, i) => mealData[key].push({...e, id: now + i}));
+  saveMealData();
+  renderAll();
+  showToast(`昨日の${MEALS.find(m => m.key === key).label}（${src.length}件）を追加しました`);
+}
+
 function addEntry(key, entry) {
   mealData[key].push(entry);
   saveMealData();
@@ -1071,14 +1082,13 @@ function addEntry(key, entry) {
 
 function shareSummary() {
   const t = getTotals();
-  const over = t.calories > goalCal;
-  const lines = [`📊 ${document.getElementById('date-lbl').textContent}の記録${lastGrade ? ' ' + lastGrade : ''}`];
+  const lines = [`📊 ${document.getElementById('date-lbl').textContent}の記録`];
   MEALS.forEach(m => {
     const cal = (mealData[m.key]||[]).reduce((s,e)=>s+(e.total?.calories||0),0);
     const names = (mealData[m.key]||[]).map(e => e.input).join('、');
     lines.push(`${m.emoji}${m.label} ${cal ? cal + 'kcal' : '—'}${names ? '（' + (names.length > 30 ? names.slice(0,30) + '…' : names) + '）' : ''}`);
   });
-  lines.push(`合計 ${t.calories} / ${goalCal} kcal（${over ? (t.calories - goalCal) + 'kcal 超過' : '残り ' + (goalCal - t.calories) + 'kcal'}）`);
+  lines.push(`合計 ${t.calories} kcal（目安 ${goalMin}〜${goalMax} kcal）`);
   lines.push(`P ${t.protein}g・F ${t.fat}g・C ${t.carbs}g`);
   shareText(lines.join('\n'));
 }
