@@ -85,6 +85,9 @@ input{outline:none}
 .meal-mini-fill{height:100%;border-radius:99px;transition:width .5s}
 .meal-body{border-top:1px solid var(--line);padding:12px 14px}
 .quick-btns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.usual-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.usual-btn{background:var(--accent);color:var(--on-accent);border:none;border-radius:99px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.usual-save{background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:4px 2px}
 .quick-btn{background:var(--warm-soft);border:none;border-radius:99px;padding:6px 12px;font-size:12px;color:var(--warm);cursor:pointer;font-family:inherit}
 .entry{background:var(--sunken);border-radius:12px;margin-bottom:6px;overflow:hidden}
 .entry-hdr{padding:10px 13px;cursor:pointer;display:flex;align-items:center;gap:8px}
@@ -356,13 +359,17 @@ const MEALS = [
   {key:'snack',   label:'おやつ', emoji:'🍪', color:'#b86a7e'},
   {key:'dinner',  label:'夕食', emoji:'🌙', color:'#7477b8'},
 ];
-const QUICK_RICE_140 = {name:'ご飯140g', cal:235, fat:0, carbs:52, protein:4};
+// 白米ご飯は 168kcal/100g。もち麦ご飯は「白米1合＋もち麦50g」で炊いた場合の概算（約149kcal/100g・食物繊維 約1.6g/100g）
+const QUICK_RICE_100 = {name:'ご飯100g', cal:168, fat:0, carbs:37, protein:3};
+const QUICK_RICE_150 = {name:'ご飯150g', cal:252, fat:0, carbs:56, protein:4};
 const QUICK_RICE_200 = {name:'ご飯200g', cal:336, fat:0, carbs:74, protein:5};
+const QUICK_MUGI_100 = {name:'もち麦ご飯100g', cal:149, fat:0, carbs:34, protein:3};
+const QUICK_MUGI_150 = {name:'もち麦ご飯150g', cal:224, fat:1, carbs:51, protein:4};
+const QUICK_RICES = [QUICK_RICE_100, QUICK_RICE_150, QUICK_RICE_200, QUICK_MUGI_100, QUICK_MUGI_150];
 const QUICK_MIKAN = {name:'みかん1個', cal:45, fat:0, carbs:11, protein:1};
 const QUICK_GRAPEFRUIT = {name:'グレープフルーツ半分', cal:48, fat:0, carbs:12, protein:1};
 const QUICK_MORNING = [
-  QUICK_RICE_140,
-  QUICK_RICE_200,
+  ...QUICK_RICES,
   {name:'トースト', cal:150, fat:3, carbs:28, protein:5}, // 6枚切り1枚
   {name:'卵焼き', cal:80, fat:5, carbs:2, protein:6},
   {name:'納豆', cal:84, fat:5, carbs:6, protein:8},
@@ -372,14 +379,14 @@ const QUICK_MORNING = [
   QUICK_MIKAN,
   QUICK_GRAPEFRUIT,
 ];
-const QUICK_DINNER = [QUICK_RICE_140, QUICK_RICE_200, QUICK_GRAPEFRUIT, QUICK_MIKAN];
-const QUICK = {morning: QUICK_MORNING, dinner: QUICK_DINNER};
+const QUICK_DINNER = [...QUICK_RICES, QUICK_GRAPEFRUIT, QUICK_MIKAN];
+const QUICK = {morning: QUICK_MORNING, lunch: QUICK_RICES, dinner: QUICK_DINNER};
 
 let apiKey = '';
 let goalCal = 1800; // 目安の中央値（ご飯量アドバイスなどに使う）
 let goalMin = 1750;
 let goalMax = 1850;
-let goalRice = 600;
+let goalRice = 450;
 let weightPw = '';
 let weightUnlocked = false;
 let mealData = {morning:[], lunch:[], snack:[], dinner:[]};
@@ -399,7 +406,7 @@ function load() {
     goalMin     = parseInt(localStorage.getItem('c_goalcal_min')) || goalCal - 50;
     goalMax     = parseInt(localStorage.getItem('c_goalcal_max')) || goalCal + 50;
     goalCal     = Math.round((goalMin + goalMax) / 2);
-    goalRice    = parseInt(localStorage.getItem('c_goalrice')) || 600;
+    goalRice    = parseInt(localStorage.getItem('c_goalrice')) || 450;
     weightPw    = localStorage.getItem('c_weightpw') || '';
     weightData  = JSON.parse(localStorage.getItem('c_weight') || '{}');
     favorites   = JSON.parse(localStorage.getItem('c_favs') || '[]');
@@ -690,6 +697,12 @@ function renderSections() {
         <span class="fav-chip-del" onclick="event.stopPropagation();deleteFav(${favorites.indexOf(f)})">✕</span>
       </div>`).join('')}</div>` : '';
 
+    const usual = getUsual(m.key);
+    const usualHTML = (usual || entries.length) ? `<div class="usual-row">
+      ${usual ? `<button class="usual-btn" onclick="addUsual('${m.key}')">⟳ いつもの${m.label}（${usual.total?.calories || 0} kcal）</button>` : ''}
+      ${entries.length ? `<button class="usual-save" onclick="saveUsual('${m.key}')">この${m.label}を「いつもの」にする</button>` : ''}
+    </div>` : '';
+
     const quickHTML = QUICK[m.key] ? `<div class="quick-btns">${
       QUICK[m.key].map((q,qi)=>`<button class="quick-btn" onclick="addQuick('${m.key}',${qi})">${q.name}</button>`).join('')
     }</div>` : '';
@@ -712,6 +725,7 @@ function renderSections() {
       ${isOpen ? `<div class="meal-body">
         ${entriesHTML}
         ${favsHTML}
+        ${usualHTML}
         ${quickHTML}
         <div class="input-box">
           <textarea id="ta-${m.key}" rows="2" placeholder="${m.label}を入力… 例: ご飯1杯・鮭の塩焼き" style="width:100%;background:none;border:none;color:var(--text);font-size:13px;line-height:1.6"></textarea>
@@ -1048,6 +1062,7 @@ function renderSummary() {
   div.innerHTML = `
     <div style="font-size:10px;color:var(--lavender);letter-spacing:1px;margin-bottom:8px">📊 今日のまとめ</div>
     <div style="font-size:13px;color:var(--text);line-height:1.7">合計 ${all.calories} kcal（目安 ${goalMin}〜${goalMax} kcal）</div>
+    ${all.calories > goalMax ? `<div style="font-size:12px;color:var(--text2);line-height:1.7;margin-top:6px;padding:8px 10px;background:var(--sunken);border-radius:10px">体脂肪1kgは約7,200kcal。1日多く食べても、脂肪はほとんど増えません。次の食事から、いつもの量に戻すだけで大丈夫です。</div>` : ''}
     <div style="display:flex;gap:8px;margin-top:10px">
       ${cell('P タンパク質', 'protein', 'var(--teal)')}
       ${cell('F 脂質', 'fat', 'var(--rose)')}
@@ -1145,6 +1160,44 @@ function yesterdayEntries(key) {
   try { return (JSON.parse(localStorage.getItem('c_meals_' + dateStr(d)) || 'null') || {})[key] || []; }
   catch(e) { return []; }
 }
+// ── いつもの：食事ごとに1つ。中身は実際に記録した食事から作る ──
+const DEFAULT_USUAL = {
+  dinner: {
+    input: 'いつもの夕食（もち麦ご飯・焼き鮭・野菜たっぷり・味噌汁）',
+    meals: [
+      {name:'もち麦ご飯', amount:'150g', calories:224, fat:1, carbs:51, protein:4},
+      {name:'焼き鮭', amount:'1切れ（80g）', calories:130, fat:4, carbs:0, protein:21},
+      {name:'野菜たっぷり（サラダ・ブロッコリー・きのこ・トマト）', amount:'両手1杯', calories:60, fat:1, carbs:10, protein:4},
+      {name:'味噌汁', amount:'1杯', calories:40, fat:1, carbs:5, protein:2},
+    ],
+    total: {calories:454, fat:7, carbs:66, protein:31},
+    advice: '', score: 0,
+  },
+};
+function getUsual(key) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('c_usual_' + key) || 'null');
+    return saved || DEFAULT_USUAL[key] || null;
+  } catch(e) { return DEFAULT_USUAL[key] || null; }
+}
+function addUsual(key) {
+  const u = getUsual(key);
+  if (!u) return;
+  addEntry(key, {...JSON.parse(JSON.stringify(u)), id: Date.now()});
+}
+function saveUsual(key) {
+  const entries = mealData[key] || [];
+  if (!entries.length) return;
+  const label = MEALS.find(m => m.key === key).label;
+  const meals = entries.flatMap(e => (e.meals && e.meals.length) ? e.meals.map(({base, ratio, ...f}) => ({...f}))
+    : [{name: e.input, amount: '1食分', ...(e.total || {})}]);
+  const total = Object.fromEntries(NUTRIENTS.map(n => [n, entries.reduce((s, e) => s + (e.total?.[n] || 0), 0)]));
+  const names = entries.map(e => e.input).join('・');
+  save('c_usual_' + key, {input: `いつもの${label}（${names.length > 24 ? names.slice(0, 24) + '…' : names}）`, meals, total, advice: '', score: 0});
+  renderSections();
+  showToast(`今の${label}（${total.calories} kcal）を「いつもの」にしました`);
+}
+
 function copyYesterday(key) {
   const src = yesterdayEntries(key);
   if (!src.length) return;
