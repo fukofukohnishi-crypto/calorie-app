@@ -359,12 +359,12 @@ const MEALS = [
   {key:'snack',   label:'おやつ', emoji:'🍪', color:'#b86a7e'},
   {key:'dinner',  label:'夕食', emoji:'🌙', color:'#7477b8'},
 ];
-// 白米ご飯は 168kcal/100g。もち麦ご飯は「白米1合＋もち麦50g」で炊いた場合の概算（約149kcal/100g・食物繊維 約1.6g/100g）
-// 家のご飯は「白米1合＋もち麦50g」のもち麦ご飯（約149kcal/100g）。外食用に白米も1つ置く（168kcal/100g）
-const QUICK_MUGI_100 = {name:'もち麦ご飯100g', cal:149, fat:0, carbs:34, protein:3};
-const QUICK_MUGI_150 = {name:'もち麦ご飯150g', cal:224, fat:1, carbs:51, protein:4};
-const QUICK_MUGI_200 = {name:'もち麦ご飯200g', cal:298, fat:1, carbs:68, protein:5};
-const QUICK_WHITE_150 = {name:'白米150g（外食）', cal:252, fat:0, carbs:56, protein:4};
+// 家のご飯は「白米3合半＋もち麦フタ2杯（約40〜50g）」のもち麦ご飯。
+// 食品成分表（八訂）の値で、炊き上がり約153kcal/100g（白米ご飯は156kcal/100g）。外食用に白米も1つ置く
+const QUICK_MUGI_100 = {name:'もち麦ご飯100g', cal:153, fat:0, carbs:35, protein:3};
+const QUICK_MUGI_150 = {name:'もち麦ご飯150g', cal:230, fat:1, carbs:52, protein:4};
+const QUICK_MUGI_200 = {name:'もち麦ご飯200g', cal:306, fat:1, carbs:70, protein:6};
+const QUICK_WHITE_150 = {name:'白米150g（外食）', cal:234, fat:0, carbs:56, protein:4};
 const QUICK_RICES = [QUICK_MUGI_100, QUICK_MUGI_150, QUICK_MUGI_200, QUICK_WHITE_150];
 const QUICK_MIKAN = {name:'みかん1個', cal:45, fat:0, carbs:11, protein:1};
 const QUICK_GRAPEFRUIT = {name:'グレープフルーツ半分', cal:48, fat:0, carbs:12, protein:1};
@@ -629,12 +629,13 @@ function renderRice() {
     box.style.display = 'none';
     return;
   }
-  const totalCarbsAsRice = Math.round(sf.carbs / 37 * 100);
+  // 家のもち麦ご飯：糖質 約35g・約153kcal/100g
+  const totalCarbsAsRice = Math.round(sf.carbs / 35 * 100);
   const remCal = Math.max(0, goalCal - sf.calories);
   // ご飯は糖質の目安で決め、残りカロリーの半分（残り半分はおかず）を超えないようにする
-  const riceByCal = Math.floor(remCal * 0.5 / 1.68 / 10) * 10;
+  const riceByCal = Math.floor(remCal * 0.5 / 1.53 / 10) * 10;
   const riceRem = Math.min(Math.max(0, goalRice - totalCarbsAsRice), riceByCal);
-  const riceKcal = Math.round(riceRem * 1.68);
+  const riceKcal = Math.round(riceRem * 1.53);
   const bowl = riceRem >= 250 ? '大盛り' : riceRem >= 180 ? '普通盛り' : riceRem >= 120 ? '小盛り' : riceRem >= 60 ? '少量' : 'なし';
   cnt.innerHTML = riceRem <= 0
     ? `夕食は <span style="color:var(--warm);font-weight:700">ご飯なし</span> でおかず中心に。目安の中央まで残り ${remCal} kcal。`
@@ -845,7 +846,7 @@ async function analyze(mealKey) {
   try {
     const res = await fetch('/api/analyze', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({text: text + '\n（補足：家で食べるご飯は、白米1合にもち麦50gを混ぜて炊いたもち麦ご飯として計算してください）', apiKey}),
+      body: JSON.stringify({text: text + '\n（補足：家で食べるご飯は、白米3合半にもち麦40〜50gを混ぜて炊いたもち麦ご飯で、約153kcal/100gとして計算してください）', apiKey}),
     });
     const parsed = await res.json();
     if (!res.ok) throw new Error(parsed.error || 'HTTP ' + res.status);
@@ -1165,12 +1166,12 @@ const DEFAULT_USUAL = {
   dinner: {
     input: 'いつもの夕食（もち麦ご飯・焼き鮭・野菜たっぷり・味噌汁）',
     meals: [
-      {name:'もち麦ご飯', amount:'150g', calories:224, fat:1, carbs:51, protein:4},
+      {name:'もち麦ご飯', amount:'150g', calories:230, fat:1, carbs:52, protein:4},
       {name:'焼き鮭', amount:'1切れ（80g）', calories:130, fat:4, carbs:0, protein:21},
       {name:'野菜たっぷり（サラダ・ブロッコリー・きのこ・トマト）', amount:'両手1杯', calories:60, fat:1, carbs:10, protein:4},
       {name:'味噌汁', amount:'1杯', calories:40, fat:1, carbs:5, protein:2},
     ],
-    total: {calories:454, fat:7, carbs:66, protein:31},
+    total: {calories:460, fat:7, carbs:67, protein:31},
     advice: '', score: 0,
   },
 };
